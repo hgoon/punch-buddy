@@ -7,7 +7,7 @@ const SUPABASE_URL = "https://ydgnnikfmesvosghsdeg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZ25uaWtmbWVzdm9zZ2hzZGVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzI3NTcsImV4cCI6MjA5NzQwODc1N30.2fZgjUNFJVm3PrUsfqeO8Eu9UwyFoHYj9ao1Js6VFCg";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const VERSION = "v3.1";
+const VERSION = "v3.3";
 
 const COMBO_LIMIT_MS = 500;
 const MAX_HP = 10000;
@@ -127,6 +127,11 @@ function App() {
   const [showRanking,  setShowRanking] = useState(false);
   const [onlineCount,  setOnlineCount] = useState(1);
 
+  // 댓글
+  const [comments,     setComments]    = useState([]);
+  const [commentInput, setCommentInput]= useState("");
+  const [commentMsg,   setCommentMsg]  = useState("");
+
   // ── Supabase 동기화 ─────────────────────────────
   const syncToSupabase = useCallback(async (nick, delta) => {
     if (!nick || (delta.hits === 0 && delta.totalDamage === 0 && delta.koCount === 0 && delta.bestCombo === 0)) return;
@@ -213,30 +218,33 @@ function App() {
         schema: "public",
         table: "cheer_shared",
       }, (payload) => {
-        const newHp      = payload.new.hp;
-        const koBy       = payload.new.last_ko_by;
-        const attacker   = payload.new.last_attacker;
-        const dmg        = payload.new.last_damage;
+        const newHp    = payload.new.hp;
+        const koBy     = payload.new.last_ko_by;
+        const attacker = payload.new.last_attacker;
+        const dmg      = payload.new.last_damage;
 
         sharedHpRef.current = newHp;
         setHp(newHp);
 
-        // 다른 유저가 때린 경우 로그 추가
-        if (attacker && attacker !== nickname && dmg > 0) {
+        // 다른 유저 타격 로그 - attacker가 존재하고 내가 아닌 경우
+        if (attacker && attacker !== nickname && dmg > 0 && newHp > 0) {
           setLog((prev) => [
             `👊 ${attacker}의 응원! ${dmg} 포인트`,
             ...prev
           ].slice(0, 7));
         }
 
-        // KO 처리 - 내가 KO시킨 경우는 triggerKO에서 이미 처리
-        if (newHp === 0 && !koLockRef.current) {
-          koLockRef.current = true;
-          setLastKoBy(koBy || "");
-          handleSharedKO(koBy);
-        } else if (newHp === 0 && koLockRef.current && lastKoBy !== koBy) {
-          // lastKoBy 업데이트만 (내가 KO시킨 후 서버 확정값으로 보정)
-          setLastKoBy(koBy || "");
+        // KO 처리
+        if (newHp === 0) {
+          if (koBy === nickname) {
+            // 내가 KO시킨 경우 - triggerKO에서 이미 처리 중이면 skip
+            setLastKoBy(nickname);
+          } else if (!koLockRef.current) {
+            // 다른 유저가 KO시킨 경우
+            koLockRef.current = true;
+            setLastKoBy(koBy || "");
+            handleSharedKO(koBy);
+          }
         }
       })
       .subscribe();
@@ -266,6 +274,64 @@ function App() {
       setIsReviveSpeech(true);
       setTimeout(() => { setSpeech(""); setIsReviveSpeech(false); }, 2000);
     }, 5000);
+  }
+
+  // ── 댓글 초기 로드 + Realtime 구독 ────────────
+  useEffect(() => {
+    if (!started) return;
+
+    supabase
+      .from("cheer_comments")
+      .select("nickname, content, created_at")
+      .order("created_at", { ascending: false })
+      .limit(20)
+      .then(({ data }) => {
+        if (data) setComments(data.reverse());
+      });
+
+    const channel = supabase
+      .channel("cheer_comments_rt")
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "cheer_comments",
+      }, (payload) => {
+        setComments((prev) => [...prev, payload.new].slice(-20));
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [started]);
+
+  // ── 댓글 작성 ───────────────────────────────────
+  async function submitComment() {
+    const content = commentInput.trim();
+    if (!content) return;
+    if (content.length > 50) {
+      setCommentMsg("50자 이내로 작성해줘요");
+      setTimeout(() => setCommentMsg(""), 2500);
+      return;
+    }
+    if (stats.totalDamage < 100000) {
+      setCommentMsg(`포인트 부족 (${(100000 - stats.totalDamage).toLocaleString()}pt 더 필요)`);
+      setTimeout(() => setCommentMsg(""), 2500);
+      return;
+    }
+
+    const { data } = await supabase.rpc("post_cheer_comment", {
+      p_nickname: nickname,
+      p_content:  content,
+    });
+
+    if (data?.success) {
+      const next = { ...stats, totalDamage: stats.totalDamage - 100000 };
+      setStats(next);
+      localStorage.setItem("punch_stats", JSON.stringify(next));
+      setCommentInput("");
+    } else {
+      setCommentMsg(data?.reason === "not_enough_points" ? "포인트가 부족해요!" : "오류가 발생했어요");
+      setTimeout(() => setCommentMsg(""), 2500);
+    }
   }
 
   useEffect(() => {
@@ -942,6 +1008,33 @@ function App() {
         <b>응원 로그</b>
         {log.length === 0 && <p>캐릭터를 터치해 응원해봐!</p>}
         {log.map((item, index) => <p key={`${item}-${index}`}>{item}</p>)}
+      </section>
+
+      <section className="comment-section">
+        <b>응원 댓글 <span className="comment-cost">💬 10만pt 소비</span></b>
+
+        <div className="comment-list">
+          {comments.length === 0 && <p className="comment-empty">첫 댓글을 남겨봐요!</p>}
+          {comments.map((c, i) => (
+            <div key={i} className={`comment-row ${c.nickname === nickname ? "my-comment" : ""}`}>
+              <span className="comment-nick">{c.nickname}</span>
+              <span className="comment-content">{c.content}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="comment-input-wrap">
+          <input
+            className="comment-input"
+            value={commentInput}
+            onChange={(e) => setCommentInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submitComment()}
+            placeholder="응원 한마디 (최대 50자)"
+            maxLength={50}
+          />
+          <button className="comment-btn" onClick={submitComment}>전송</button>
+        </div>
+        {commentMsg && <p className="comment-msg">{commentMsg}</p>}
       </section>
     </div>
   );
