@@ -12,7 +12,7 @@ const ZONES = {
     reaction: "hit-head",
     hitbox: "head-zone",
     weak: false,
-    line: ["아!", "어우!", "머리 울려!"],
+    line: ["아!", "어우!", "머리 울려!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
   },
   face: {
     name: "얼굴",
@@ -21,7 +21,7 @@ const ZONES = {
     reaction: "hit-face",
     hitbox: "face-zone",
     weak: false,
-    line: ["으악!", "아야!", "얼굴은 반칙!"],
+    line: ["으악!", "아야!", "얼굴은 반칙!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
   },
   philtrum: {
     name: "인중",
@@ -30,7 +30,7 @@ const ZONES = {
     reaction: "hit-face",
     hitbox: "philtrum-zone",
     weak: true,
-    line: ["끄억!", "인중은 안 돼!", "눈물 난다!"],
+    line: ["끄억!", "인중은 안 돼!", "눈물 난다!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
   },
   chest: {
     name: "명치",
@@ -39,7 +39,7 @@ const ZONES = {
     reaction: "hit-body",
     hitbox: "chest-zone",
     weak: true,
-    line: ["컥!", "숨 막혀!", "명치...!"],
+    line: ["컥!", "숨 막혀!", "명치...!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
   },
   belly: {
     name: "배",
@@ -48,7 +48,7 @@ const ZONES = {
     reaction: "hit-body",
     hitbox: "belly-zone",
     weak: false,
-    line: ["윽!", "배 아파!", "오우!"],
+    line: ["윽!", "배 아파!", "오우!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
   },
   groin: {
     name: "급소",
@@ -57,7 +57,7 @@ const ZONES = {
     reaction: "hit-groin",
     hitbox: "groin-zone",
     weak: true,
-    line: ["으아아악!", "그건 아니지!", "잠깐만!!"],
+    line: ["으아아악!", "그건 아니지!", "잠깐만!!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
   },
   leg: {
     name: "다리",
@@ -66,7 +66,7 @@ const ZONES = {
     reaction: "hit-leg",
     hitbox: "leg-zone",
     weak: false,
-    line: ["휘청!", "다리 풀린다!", "아야!"],
+    line: ["휘청!", "다리 풀린다!", "아야!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
   },
 };
 
@@ -248,9 +248,9 @@ function App() {
 
   function showSpeech(zone, isCritical, isUltra) {
     const lines = isUltra
-      ? ["으아아악!!", "잠깐만!!", "너무 강해!!"]
+      ? ["으아아악!!", "잠깐만!!", "너무 강해!!", "내 안에 뭔가가 움직였다"]
       : isCritical
-      ? ["악!!", "크윽!!", "제대로 들어왔다!"]
+      ? ["악!!", "크윽!!", "제대로 들어왔다!", "나를 버렸습니다.", "이게 팀이야"]
       : zone.line;
 
     const nextLine = lines[random(0, lines.length - 1)];
