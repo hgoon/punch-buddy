@@ -458,44 +458,9 @@ input {
 /* ── 조준경 ─────────────────────────────────── */
 .crosshair {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 19;
+  width: 80px;
+  height: 80px;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-}
-
-.stage.charging .crosshair {
-  opacity: 1;
-}
-
-/* 가로선 */
-.crosshair::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: rgba(255, 50, 50, 0.45);
-  transform: translateY(-50%);
-  box-shadow: 0 0 6px rgba(255, 50, 50, 0.35);
-}
-
-/* 세로선 */
-.crosshair::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: rgba(255, 50, 50, 0.45);
-  transform: translateX(-50%);
-  box-shadow: 0 0 6px rgba(255, 50, 50, 0.35);
 }
 
 /* 중앙 원 */
@@ -507,47 +472,78 @@ input {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 50, 50, 0.6);
-  box-shadow: 0 0 10px rgba(255, 50, 50, 0.3);
+  border: 1.5px solid rgba(255, 50, 50, 0.7);
+  box-shadow: 0 0 10px rgba(255, 50, 50, 0.35);
   transition: width 0.2s ease, height 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* 단계별 조준경 좁혀짐 + 색상 강화 */
+/* 가로선 */
+.crosshair-line {
+  position: absolute;
+  background: rgba(255, 50, 50, 0.55);
+  box-shadow: 0 0 5px rgba(255, 50, 50, 0.35);
+  transition: background 0.2s ease;
+}
+
+.crosshair-h {
+  top: 50%;
+  left: -30px;
+  right: -30px;
+  height: 1px;
+  transform: translateY(-50%);
+}
+
+.crosshair-v {
+  left: 50%;
+  top: -30px;
+  bottom: -30px;
+  width: 1px;
+  transform: translateX(-50%);
+}
+
+/* 단계별 원 좁혀짐 + 색상 강화 */
 .crosshair.lv1 .crosshair-center {
   width: 48px; height: 48px;
-  border-color: rgba(255, 170, 0, 0.7);
-  box-shadow: 0 0 12px rgba(255, 170, 0, 0.4);
+  border-color: rgba(255, 170, 0, 0.75);
+  box-shadow: 0 0 12px rgba(255, 170, 0, 0.45);
 }
+.crosshair.lv1 .crosshair-line {
+  background: rgba(255, 170, 0, 0.6);
+}
+
 .crosshair.lv2 .crosshair-center {
   width: 36px; height: 36px;
-  border-color: rgba(255, 100, 0, 0.8);
-  box-shadow: 0 0 16px rgba(255, 100, 0, 0.5);
+  border-color: rgba(255, 100, 0, 0.85);
+  box-shadow: 0 0 16px rgba(255, 100, 0, 0.55);
 }
+.crosshair.lv2 .crosshair-line {
+  background: rgba(255, 100, 0, 0.65);
+}
+
 .crosshair.lv3 .crosshair-center {
   width: 24px; height: 24px;
   border-color: rgba(255, 30, 0, 0.95);
-  box-shadow: 0 0 20px rgba(255, 30, 0, 0.65);
+  box-shadow: 0 0 20px rgba(255, 30, 0, 0.7);
   animation: crosshairPulse 0.3s ease-in-out infinite alternate;
 }
+.crosshair.lv3 .crosshair-line {
+  background: rgba(255, 30, 0, 0.7);
+}
+
 .crosshair.lv4 .crosshair-center {
   width: 12px; height: 12px;
   border-color: rgba(255, 0, 0, 1);
   box-shadow: 0 0 28px rgba(255, 0, 0, 0.9), 0 0 50px rgba(255, 0, 0, 0.4);
   animation: crosshairPulse 0.15s ease-in-out infinite alternate;
 }
-
-.crosshair.lv3::before, .crosshair.lv3::after {
-  background: rgba(255, 30, 0, 0.6);
-  box-shadow: 0 0 8px rgba(255, 30, 0, 0.45);
-}
-.crosshair.lv4::before, .crosshair.lv4::after {
-  background: rgba(255, 0, 0, 0.75);
-  box-shadow: 0 0 10px rgba(255, 0, 0, 0.6);
+.crosshair.lv4 .crosshair-line {
+  background: rgba(255, 0, 0, 0.8);
+  box-shadow: 0 0 8px rgba(255, 0, 0, 0.6);
 }
 
 @keyframes crosshairPulse {
   from { transform: translate(-50%, -50%) scale(1);    opacity: 0.85; }
-  to   { transform: translate(-50%, -50%) scale(1.2);  opacity: 1;    }
+  to   { transform: translate(-50%, -50%) scale(1.25); opacity: 1;    }
 }
 
 /* ── POWER 차지 텍스트 ──────────────────────── */
