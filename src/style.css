@@ -688,51 +688,51 @@ input {
 
 .head-zone {
   left: 37%;
-  top: 38%;
+  top: 43%;
   width: 26%;
-  height: 7%;
+  height: 9%;
 }
 
 .face-zone {
   left: 36%;
-  top: 44%;
+  top: 51%;
   width: 28%;
-  height: 7%;
+  height: 8%;
 }
 
 .philtrum-zone {
   left: 44%;
-  top: 49%;
+  top: 57%;
   width: 12%;
   height: 4%;
 }
 
 .chest-zone {
   left: 35%;
-  top: 53%;
+  top: 61%;
   width: 28%;
   height: 7%;
 }
 
 .belly-zone {
   left: 35%;
-  top: 60%;
+  top: 68%;
   width: 28%;
   height: 7%;
 }
 
 .groin-zone {
   left: 39%;
-  top: 67%;
+  top: 75%;
   width: 22%;
   height: 6%;
 }
 
 .leg-zone {
   left: 30%;
-  top: 73%;
+  top: 81%;
   width: 40%;
-  height: 17%;
+  height: 16%;
 }
 
 .floating-effect {
