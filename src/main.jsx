@@ -11,7 +11,8 @@ const ZONES = {
     max: 16,
     reaction: "hit-head",
     hitbox: "head-zone",
-    wound: { type: "bandage", emoji: "🩹", x: 43, y: 31 },
+    weak: false,
+    line: ["아!", "어우!", "머리 울려!"],
   },
   face: {
     name: "얼굴",
@@ -19,7 +20,8 @@ const ZONES = {
     max: 24,
     reaction: "hit-face",
     hitbox: "face-zone",
-    wound: { type: "nosebleed", emoji: "🩸", x: 51, y: 38 },
+    weak: false,
+    line: ["으악!", "아야!", "얼굴은 반칙!"],
   },
   philtrum: {
     name: "인중",
@@ -28,7 +30,7 @@ const ZONES = {
     reaction: "hit-face",
     hitbox: "philtrum-zone",
     weak: true,
-    wound: { type: "nosebleed", emoji: "🩸", x: 50, y: 39 },
+    line: ["끄억!", "인중은 안 돼!", "눈물 난다!"],
   },
   chest: {
     name: "명치",
@@ -37,7 +39,7 @@ const ZONES = {
     reaction: "hit-body",
     hitbox: "chest-zone",
     weak: true,
-    wound: { type: "bruise", emoji: "🟣", x: 50, y: 55 },
+    line: ["컥!", "숨 막혀!", "명치...!"],
   },
   belly: {
     name: "배",
@@ -45,7 +47,8 @@ const ZONES = {
     max: 19,
     reaction: "hit-body",
     hitbox: "belly-zone",
-    wound: { type: "bruise", emoji: "🟣", x: 50, y: 62 },
+    weak: false,
+    line: ["윽!", "배 아파!", "오우!"],
   },
   groin: {
     name: "급소",
@@ -54,7 +57,7 @@ const ZONES = {
     reaction: "hit-groin",
     hitbox: "groin-zone",
     weak: true,
-    wound: { type: "dizzy", emoji: "💫", x: 50, y: 30 },
+    line: ["으아아악!", "그건 아니지!", "잠깐만!!"],
   },
   leg: {
     name: "다리",
@@ -62,14 +65,14 @@ const ZONES = {
     max: 14,
     reaction: "hit-leg",
     hitbox: "leg-zone",
-    wound: { type: "bandage", emoji: "🩹", x: 55, y: 80 },
+    weak: false,
+    line: ["휘청!", "다리 풀린다!", "아야!"],
   },
 };
 
 function App() {
   const pressStart = useRef(0);
   const effectId = useRef(1);
-  const woundId = useRef(1);
   const lastHitAt = useRef(0);
   const comboResetTimer = useRef(null);
 
@@ -91,7 +94,8 @@ function App() {
   const [reaction, setReaction] = useState("");
   const [chargePercent, setChargePercent] = useState(0);
   const [floatingEffects, setFloatingEffects] = useState([]);
-  const [wounds, setWounds] = useState([]);
+  const [speech, setSpeech] = useState("");
+  const [flash, setFlash] = useState("");
 
   function startGame() {
     const cleanName = nickname.trim();
@@ -119,7 +123,8 @@ function App() {
     setReaction("");
     setChargePercent(0);
     setFloatingEffects([]);
-    setWounds([]);
+    setSpeech("");
+    setFlash("");
     lastHitAt.current = 0;
 
     if (comboResetTimer.current) {
@@ -201,14 +206,15 @@ function App() {
       combo: nextCombo,
     });
 
-    addWound(zone, damage, isCritical, isUltra);
+    showSpeech(zone, isCritical, isUltra);
+    showFlash(isCritical, isUltra);
     vibrate(isUltra, isCritical);
 
     const message = isUltra
-      ? `🔥 ${zone.name} 울트라 크리티컬! ${damage} 데미지`
+      ? `🔥 ${zone.name} 울트라 응원! ${damage} 포인트`
       : isCritical
-      ? `💥 ${zone.name} 크리티컬! ${damage} 데미지`
-      : `👊 ${zone.name} 타격! ${damage} 데미지`;
+      ? `💥 ${zone.name} 크리티컬 응원! ${damage} 포인트`
+      : `👊 ${zone.name} 응원! ${damage} 포인트`;
 
     setLog((prev) => [message, ...prev].slice(0, 7));
 
@@ -240,38 +246,29 @@ function App() {
     }, 850);
   }
 
-  function addWound(zone, damage, isCritical, isUltra) {
-    if (!zone.wound) return;
+  function showSpeech(zone, isCritical, isUltra) {
+    const lines = isUltra
+      ? ["으아아악!!", "잠깐만!!", "너무 강해!!"]
+      : isCritical
+      ? ["악!!", "크윽!!", "제대로 들어왔다!"]
+      : zone.line;
 
-    // 너무 자주 상처가 생기면 지저분해 보여서 강한 타격 위주로만 표시
-    const shouldAdd =
-      isUltra || isCritical || damage >= 38 || Math.random() < 0.07;
+    const nextLine = lines[random(0, lines.length - 1)];
+    setSpeech(nextLine);
 
-    if (!shouldAdd) return;
+    setTimeout(() => {
+      setSpeech("");
+    }, 820);
+  }
 
-    const id = woundId.current++;
-    const spreadX = random(-1, 1);
-    const spreadY = random(-1, 1);
+  function showFlash(isCritical, isUltra) {
+    if (!isCritical && !isUltra) return;
 
-    setWounds((prev) => {
-      // 같은 부위 상처는 누적하지 않고 최신 상태로 교체
-      const withoutSameType = prev.filter((item) => item.type !== zone.wound.type);
+    setFlash(isUltra ? "ultra-flash" : "critical-flash");
 
-      const next = [
-        ...withoutSameType,
-        {
-          id,
-          type: zone.wound.type,
-          emoji: zone.wound.emoji,
-          x: zone.wound.x + spreadX,
-          y: zone.wound.y + spreadY,
-          big: isUltra || damage >= 65,
-        },
-      ];
-
-      // 화면이 지저분해지지 않게 최대 4개만 유지
-      return next.slice(-4);
-    });
+    setTimeout(() => {
+      setFlash("");
+    }, isUltra ? 130 : 90);
   }
 
   function vibrate(isUltra, isCritical) {
@@ -334,11 +331,11 @@ function App() {
 
       <section className="stats">
         <div>
-          <span>타격</span>
+          <span>응원</span>
           <b>{stats.hits}</b>
         </div>
         <div>
-          <span>총 데미지</span>
+          <span>총 포인트</span>
           <b>{stats.totalDamage}</b>
         </div>
         <div>
@@ -355,23 +352,17 @@ function App() {
         className={`stage ${reaction.includes("critical") ? "shake" : ""}`}
         onContextMenu={(e) => e.preventDefault()}
       >
+        {flash && <div className={`screen-flash ${flash}`} />}
+
         <div className="target-wrap">
+          {speech && <div className="speech-bubble">{speech}</div>}
+
           <img
             className={`character ${reaction}`}
             src="/coach_red.png"
             alt="character"
             draggable="false"
           />
-
-          {wounds.map((wound) => (
-            <div
-              key={wound.id}
-              className={`wound ${wound.type} ${wound.big ? "big-wound" : ""}`}
-              style={{ left: `${wound.x}%`, top: `${wound.y}%` }}
-            >
-              {wound.emoji}
-            </div>
-          ))}
         </div>
 
         {floatingEffects.map((item) => (
@@ -384,7 +375,7 @@ function App() {
           >
             <div className="hit-emoji">{item.emoji}</div>
             <div className="hit-label">{item.label}</div>
-            <div className="hit-damage">-{item.damage}</div>
+            <div className="hit-damage">+{item.damage}</div>
             {item.combo >= 2 && <div className="hit-combo">{item.combo} COMBO</div>}
           </div>
         ))}
@@ -409,7 +400,7 @@ function App() {
       </section>
 
       <section className="log">
-        <b>타격 로그</b>
+        <b>응원 로그</b>
         {log.length === 0 && <p>캐릭터를 터치해 응원해봐!</p>}
         {log.map((item, index) => (
           <p key={`${item}-${index}`}>{item}</p>
