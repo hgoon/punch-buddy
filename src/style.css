@@ -1,348 +1,516 @@
-import React, { useRef, useState } from "react";
-import { createRoot } from "react-dom/client";
-import "./style.css";
-
-function App() {
-  const pressStart = useRef(0);
-  const effectId = useRef(1);
-
-  const [nickname, setNickname] = useState(
-    localStorage.getItem("punch_nickname") || ""
-  );
-
-  const [started, setStarted] = useState(
-    !!localStorage.getItem("punch_nickname")
-  );
-
-  const [stats, setStats] = useState(() => {
-    return JSON.parse(
-      localStorage.getItem("punch_stats") ||
-        '{"hits":0,"totalDamage":0,"maxDamage":0,"combo":0}'
-    );
-  });
-
-  const [log, setLog] = useState([]);
-  const [reaction, setReaction] = useState("");
-  const [chargePercent, setChargePercent] = useState(0);
-  const [floatingEffects, setFloatingEffects] = useState([]);
-  const [condition, setCondition] = useState({
-    bruise: false,
-    nosebleed: false,
-    bandage: false,
-    dizzy: false,
-  });
-
-  const zones = {
-    head: { name: "머리", min: 8, max: 16, reaction: "hit-head" },
-    face: { name: "얼굴", min: 10, max: 22, reaction: "hit-face" },
-    body: { name: "몸통", min: 7, max: 16, reaction: "hit-body" },
-    leg: { name: "다리", min: 5, max: 13, reaction: "hit-leg" },
-  };
-
-  function preventDefaultTouch(event) {
-    event.preventDefault();
-  }
-
-  function startGame() {
-    const cleanName = nickname.trim();
-
-    if (!cleanName) {
-      alert("닉네임을 입력해줘!");
-      return;
-    }
-
-    localStorage.setItem("punch_nickname", cleanName);
-    setNickname(cleanName);
-    setStarted(true);
-  }
-
-  function resetGame() {
-    const resetStats = {
-      hits: 0,
-      totalDamage: 0,
-      maxDamage: 0,
-      combo: 0,
-    };
-
-    localStorage.setItem("punch_stats", JSON.stringify(resetStats));
-    setStats(resetStats);
-    setLog([]);
-    setReaction("");
-    setChargePercent(0);
-    setFloatingEffects([]);
-    setCondition({
-      bruise: false,
-      nosebleed: false,
-      bandage: false,
-      dizzy: false,
-    });
-  }
-
-  function startCharge(event) {
-    event.preventDefault();
-    pressStart.current = Date.now();
-    setChargePercent(100);
-  }
-
-  function endCharge(zoneKey, event) {
-    event.preventDefault();
-
-    const zone = zones[zoneKey];
-    if (!zone) return;
-
-    const rect = event.currentTarget.parentElement.getBoundingClientRect();
-    const touchX = event.clientX - rect.left;
-    const touchY = event.clientY - rect.top;
-
-    const holdTime = Math.min(Date.now() - pressStart.current, 2000);
-    const chargeMultiplier = 1 + holdTime / 900;
-
-    const baseDamage = random(zone.min, zone.max);
-    const isCritical = Math.random() < 0.14;
-    const isUltra = holdTime > 1300 && Math.random() < 0.22;
-
-    let damage = Math.floor(baseDamage * chargeMultiplier);
-
-    if (isCritical) damage *= 3;
-    if (isUltra) damage *= 5;
-
-    const nextStats = {
-      hits: stats.hits + 1,
-      totalDamage: stats.totalDamage + damage,
-      maxDamage: Math.max(stats.maxDamage, damage),
-      combo: stats.combo + 1,
-    };
-
-    setStats(nextStats);
-    localStorage.setItem("punch_stats", JSON.stringify(nextStats));
-
-    updateCondition(nextStats.hits, damage, zoneKey);
-
-    const nextReaction = isUltra
-      ? "super-critical"
-      : isCritical
-      ? "critical"
-      : zone.reaction;
-
-    setReaction(nextReaction);
-    setChargePercent(0);
-
-    addFloatingEffect({
-      x: touchX,
-      y: touchY,
-      damage,
-      zoneName: zone.name,
-      critical: isCritical,
-      ultra: isUltra,
-    });
-
-    vibrate(isUltra, isCritical);
-
-    const message = isUltra
-      ? `🔥 ${zone.name} 울트라 크리티컬! ${damage} 데미지`
-      : isCritical
-      ? `💥 ${zone.name} 크리티컬! ${damage} 데미지`
-      : `👊 ${zone.name} 타격! ${damage} 데미지`;
-
-    setLog((prev) => [message, ...prev].slice(0, 7));
-
-    setTimeout(() => {
-      setReaction("");
-    }, isUltra ? 650 : 430);
-  }
-
-  function addFloatingEffect({ x, y, damage, zoneName, critical, ultra }) {
-    const id = effectId.current++;
-
-    const next = {
-      id,
-      x,
-      y,
-      damage,
-      zoneName,
-      critical,
-      ultra,
-      label: ultra ? "ULTRA!" : critical ? "CRITICAL!" : "HIT!",
-      emoji: ultra ? "💥" : critical ? "💢" : "👊",
-    };
-
-    setFloatingEffects((prev) => [...prev, next]);
-
-    setTimeout(() => {
-      setFloatingEffects((prev) => prev.filter((item) => item.id !== id));
-    }, 850);
-  }
-
-  function updateCondition(hits, damage, zoneKey) {
-    setCondition((prev) => {
-      const next = { ...prev };
-
-      if (hits >= 5 || zoneKey === "face") next.bruise = true;
-      if (hits >= 9 || (zoneKey === "face" && damage >= 35)) next.nosebleed = true;
-      if (hits >= 16 || damage >= 65) next.bandage = true;
-      if (damage >= 90 || hits >= 28) next.dizzy = true;
-
-      return next;
-    });
-  }
-
-  function vibrate(isUltra, isCritical) {
-    if (!navigator.vibrate) return;
-
-    if (isUltra) {
-      navigator.vibrate([40, 40, 80]);
-      return;
-    }
-
-    if (isCritical) {
-      navigator.vibrate([30, 30, 40]);
-      return;
-    }
-
-    navigator.vibrate(18);
-  }
-
-  function random(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
-
-  if (!started) {
-    return (
-      <div className="app intro">
-        <h1>혼쭐내기 👊</h1>
-        <p>캐릭터를 터치해서 스트레스를 날려보자!</p>
-
-        <input
-          value={nickname}
-          onChange={(e) => setNickname(e.target.value)}
-          placeholder="닉네임 입력"
-          maxLength={12}
-        />
-
-        <button className="primary-button" onClick={startGame}>
-          게임 시작
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="app"
-      onContextMenu={(e) => e.preventDefault()}
-      onDragStart={(e) => e.preventDefault()}
-      onSelect={(e) => e.preventDefault()}
-    >
-      <header className="top">
-        <div>
-          <h1>혼쭐내기 👊</h1>
-          <p>{nickname}</p>
-        </div>
-
-        <button className="small-button" onClick={resetGame}>
-          리셋
-        </button>
-      </header>
-
-      <section className="stats">
-        <div>
-          <span>타격</span>
-          <b>{stats.hits}</b>
-        </div>
-        <div>
-          <span>총 데미지</span>
-          <b>{stats.totalDamage}</b>
-        </div>
-        <div>
-          <span>최고 한방</span>
-          <b>{stats.maxDamage}</b>
-        </div>
-        <div>
-          <span>콤보</span>
-          <b>{stats.combo}</b>
-        </div>
-      </section>
-
-      <main
-        className={`stage ${reaction.includes("critical") ? "shake" : ""}`}
-        onContextMenu={(e) => e.preventDefault()}
-        onTouchStart={preventDefaultTouch}
-      >
-        <img
-          className={`character ${reaction}`}
-          src="/coach_red.png"
-          alt="character"
-          draggable="false"
-        />
-
-        {condition.bruise && <div className="damage-mark bruise">🟣</div>}
-        {condition.nosebleed && <div className="damage-mark nosebleed">🩸</div>}
-        {condition.bandage && <div className="damage-mark bandage">🩹</div>}
-        {condition.dizzy && <div className="damage-mark dizzy">💫</div>}
-
-        {floatingEffects.map((item) => (
-          <div
-            key={item.id}
-            className={`floating-effect ${
-              item.ultra ? "ultra-effect" : item.critical ? "critical-effect" : ""
-            }`}
-            style={{ left: item.x, top: item.y }}
-          >
-            <div className="hit-emoji">{item.emoji}</div>
-            <div className="hit-label">{item.label}</div>
-            <div className="hit-damage">-{item.damage}</div>
-          </div>
-        ))}
-
-        <button
-          aria-label="head hit zone"
-          className="hit-zone head-zone"
-          onPointerDown={startCharge}
-          onPointerUp={(event) => endCharge("head", event)}
-          onPointerCancel={() => setChargePercent(0)}
-        />
-
-        <button
-          aria-label="face hit zone"
-          className="hit-zone face-zone"
-          onPointerDown={startCharge}
-          onPointerUp={(event) => endCharge("face", event)}
-          onPointerCancel={() => setChargePercent(0)}
-        />
-
-        <button
-          aria-label="body hit zone"
-          className="hit-zone body-zone"
-          onPointerDown={startCharge}
-          onPointerUp={(event) => endCharge("body", event)}
-          onPointerCancel={() => setChargePercent(0)}
-        />
-
-        <button
-          aria-label="leg hit zone"
-          className="hit-zone leg-zone"
-          onPointerDown={startCharge}
-          onPointerUp={(event) => endCharge("leg", event)}
-          onPointerCancel={() => setChargePercent(0)}
-        />
-      </main>
-
-      <section className="charge-box">
-        <div className="charge-label">꾹 눌러 차지 공격</div>
-        <div className="charge-bar">
-          <div style={{ width: `${chargePercent}%` }} />
-        </div>
-      </section>
-
-      <section className="log">
-        <b>타격 로그</b>
-        {log.length === 0 && <p>캐릭터를 터치해봐!</p>}
-        {log.map((item, index) => (
-          <p key={`${item}-${index}`}>{item}</p>
-        ))}
-      </section>
-    </div>
-  );
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: #0f0f14;
+  color: #ffffff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+}
+
+img {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+}
+
+.app {
+  width: 100%;
+  max-width: 430px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 22px 18px 28px;
+  background:
+    radial-gradient(circle at top, rgba(255, 211, 53, 0.08), transparent 35%),
+    #0f0f14;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+}
+
+h1 {
+  margin: 0;
+  color: #ffd335;
+  font-size: 38px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+}
+
+p {
+  margin: 0;
+}
+
+.intro p {
+  color: #d7d7df;
+  font-size: 15px;
+}
+
+input {
+  width: 100%;
+  margin-top: 18px;
+  padding: 15px 16px;
+  border: 0;
+  border-radius: 14px;
+  outline: none;
+  font-size: 17px;
+  background: #ffffff;
+  color: #111111;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.primary-button {
+  width: 100%;
+  padding: 15px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ff5151, #e72f2f);
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 900;
+  box-shadow: 0 8px 0 #9f1d1d;
+}
+
+.primary-button:active {
+  transform: translateY(4px);
+  box-shadow: 0 4px 0 #9f1d1d;
+}
+
+.top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.top p {
+  margin-top: 8px;
+  color: #f0f0f2;
+  font-size: 18px;
+}
+
+.small-button {
+  margin-top: 18px;
+  padding: 8px 11px;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #247bff;
+  font-weight: 800;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.stats div {
+  min-height: 76px;
+  padding: 12px 6px;
+  border-radius: 16px;
+  background: #202027;
+  text-align: center;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.stats div:nth-child(4) {
+  grid-column: 1 / 2;
+}
+
+.stats span {
+  display: inline-block;
+  color: #f1f1f4;
+  font-size: 14px;
+}
+
+.stats b {
+  display: inline-block;
+  margin-left: 2px;
+  color: #ffd335;
+  font-size: 34px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.stage {
+  position: relative;
+  height: 470px;
+  margin-top: 10px;
+  border: 2px solid #323238;
+  border-radius: 28px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 62%, rgba(255, 255, 255, 0.08), transparent 24%),
+    radial-gradient(circle at 50% 100%, rgba(255, 211, 53, 0.08), transparent 34%),
+    linear-gradient(180deg, #19191d 0%, #121216 100%);
+  touch-action: none;
+}
+
+.stage::before {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border-radius: 22px;
+  background:
+    linear-gradient(115deg, transparent 0 44%, rgba(255, 255, 255, 0.035) 45% 47%, transparent 48%),
+    repeating-radial-gradient(circle at center, rgba(255,255,255,0.025) 0 1px, transparent 1px 12px);
+  pointer-events: none;
+}
+
+.character {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  width: 350px;
+  max-width: 96%;
+  transform: translateX(-50%);
+  transform-origin: 50% 75%;
+  user-select: none;
+  pointer-events: none;
+  filter: drop-shadow(0 18px 16px rgba(0, 0, 0, 0.55));
+  transition: transform 0.08s ease-out, filter 0.08s ease-out;
+  will-change: transform;
+}
+
+.character.hit-head {
+  animation: hitHead 0.34s ease-out;
+}
+
+.character.hit-face {
+  animation: hitFace 0.34s ease-out;
+}
+
+.character.hit-body {
+  animation: hitBody 0.34s ease-out;
+}
+
+.character.hit-leg {
+  animation: hitLeg 0.34s ease-out;
+}
+
+.character.critical {
+  animation: criticalHit 0.42s ease-out;
+  filter: drop-shadow(0 0 20px rgba(255, 60, 60, 0.95))
+          drop-shadow(0 18px 16px rgba(0, 0, 0, 0.55));
+}
+
+.character.super-critical {
+  animation: ultraHit 0.55s ease-out;
+  filter: drop-shadow(0 0 28px rgba(255, 211, 53, 1))
+          drop-shadow(0 0 18px rgba(255, 60, 60, 0.95))
+          drop-shadow(0 18px 16px rgba(0, 0, 0, 0.55));
+}
+
+.shake {
+  animation: screenShake 0.35s ease-out;
+}
+
+.hit-zone {
+  position: absolute;
+  z-index: 20;
+  background: transparent;
+  border: 0;
+  outline: none;
+  touch-action: none;
+}
+
+.head-zone {
+  left: 34%;
+  top: 35%;
+  width: 32%;
+  height: 13%;
+}
+
+.face-zone {
+  left: 31%;
+  top: 46%;
+  width: 38%;
+  height: 15%;
+}
+
+.body-zone {
+  left: 28%;
+  top: 58%;
+  width: 44%;
+  height: 18%;
+}
+
+.leg-zone {
+  left: 23%;
+  top: 74%;
+  width: 54%;
+  height: 18%;
+}
+
+.floating-effect {
+  position: absolute;
+  z-index: 30;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  animation: floatUp 0.85s ease-out forwards;
+}
+
+.hit-emoji {
+  font-size: 36px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.55));
+}
+
+.hit-label {
+  margin-top: -2px;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 1000;
+  text-shadow:
+    2px 2px 0 #000,
+    0 0 14px rgba(255, 255, 255, 0.5);
+}
+
+.hit-damage {
+  color: #ff3d3d;
+  font-size: 28px;
+  font-weight: 1000;
+  text-shadow:
+    2px 2px 0 #000,
+    0 0 16px rgba(255, 60, 60, 0.85);
+}
+
+.critical-effect .hit-label,
+.critical-effect .hit-damage {
+  color: #ffd335;
+}
+
+.ultra-effect .hit-emoji {
+  font-size: 52px;
+}
+
+.ultra-effect .hit-label {
+  color: #ff3838;
+  font-size: 30px;
+}
+
+.ultra-effect .hit-damage {
+  color: #ffd335;
+  font-size: 42px;
+}
+
+.damage-mark {
+  position: absolute;
+  z-index: 8;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,0.5));
+}
+
+.bruise {
+  left: 43%;
+  top: 48%;
+  font-size: 24px;
+}
+
+.nosebleed {
+  left: 49%;
+  top: 53%;
+  font-size: 24px;
+}
+
+.bandage {
+  left: 36%;
+  top: 42%;
+  font-size: 28px;
+  transform: rotate(-20deg);
+}
+
+.dizzy {
+  left: 52%;
+  top: 31%;
+  font-size: 36px;
+  animation: spinStar 1.1s linear infinite;
+}
+
+.charge-box {
+  margin: 12px 0 14px;
+  text-align: center;
+}
+
+.charge-label {
+  margin-bottom: 8px;
+  color: #f3f3f4;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.charge-bar {
+  width: 100%;
+  height: 22px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #222229;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.06),
+    inset 0 2px 8px rgba(0,0,0,0.5);
+}
+
+.charge-bar div {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #65ff38, #ffd335, #ff3838);
+  box-shadow: 0 0 16px rgba(255, 211, 53, 0.5);
+  transition: width 0.18s ease;
+}
+
+.log {
+  min-height: 120px;
+  padding: 16px 16px 18px;
+  border-radius: 20px;
+  background: #1b1b22;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+}
+
+.log b {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 22px;
+}
+
+.log p {
+  margin: 8px 0;
+  color: #e9e9ed;
+  font-size: 16px;
+}
+
+@keyframes hitHead {
+  0% { transform: translateX(-50%) rotate(0deg); }
+  25% { transform: translateX(-52%) rotate(-8deg) translateY(-4px); }
+  55% { transform: translateX(-47%) rotate(5deg); }
+  100% { transform: translateX(-50%) rotate(0deg); }
+}
+
+@keyframes hitFace {
+  0% { transform: translateX(-50%) rotate(0deg); }
+  22% { transform: translateX(-60%) rotate(-13deg) scale(0.98); }
+  54% { transform: translateX(-43%) rotate(7deg); }
+  100% { transform: translateX(-50%) rotate(0deg); }
+}
+
+@keyframes hitBody {
+  0% { transform: translateX(-50%) translateY(0); }
+  28% { transform: translateX(-44%) translateY(6px) scale(0.96); }
+  58% { transform: translateX(-53%) translateY(-2px) scale(1.02); }
+  100% { transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes hitLeg {
+  0% { transform: translateX(-50%) rotate(0deg); }
+  30% { transform: translateX(-54%) rotate(-5deg) translateY(12px); }
+  60% { transform: translateX(-47%) rotate(4deg) translateY(0); }
+  100% { transform: translateX(-50%) rotate(0deg); }
+}
+
+@keyframes criticalHit {
+  0% { transform: translateX(-50%) scale(1) rotate(0deg); }
+  20% { transform: translateX(-64%) scale(1.08) rotate(-16deg); }
+  55% { transform: translateX(-39%) scale(0.95) rotate(13deg); }
+  100% { transform: translateX(-50%) scale(1) rotate(0deg); }
+}
+
+@keyframes ultraHit {
+  0% { transform: translateX(-50%) translateY(0) scale(1) rotate(0deg); }
+  18% { transform: translateX(-72%) translateY(-30px) scale(1.16) rotate(-22deg); }
+  45% { transform: translateX(-24%) translateY(12px) scale(0.92) rotate(20deg); }
+  72% { transform: translateX(-55%) translateY(-8px) scale(1.05) rotate(-8deg); }
+  100% { transform: translateX(-50%) translateY(0) scale(1) rotate(0deg); }
+}
+
+@keyframes screenShake {
+  0% { transform: translateX(0); }
+  15% { transform: translateX(-8px); }
+  30% { transform: translateX(8px); }
+  45% { transform: translateX(-6px); }
+  60% { transform: translateX(6px); }
+  75% { transform: translateX(-3px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes floatUp {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -40%) scale(0.45) rotate(-10deg);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(-50%, -70%) scale(1.18) rotate(4deg);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -125%) scale(1) rotate(-2deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -175%) scale(0.85) rotate(0deg);
+  }
+}
+
+@keyframes spinStar {
+  from {
+    transform: rotate(0deg) translateY(-6px);
+  }
+  to {
+    transform: rotate(360deg) translateY(-6px);
+  }
+}
+
+@media (max-width: 390px) {
+  .app {
+    padding: 18px 14px 24px;
+  }
+
+  h1 {
+    font-size: 34px;
+  }
+
+  .stage {
+    height: 450px;
+  }
+
+  .character {
+    width: 330px;
+    bottom: 30px;
+  }
+
+  .stats b {
+    font-size: 30px;
+  }
+}
