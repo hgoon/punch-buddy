@@ -83,6 +83,7 @@ const CHARACTER_IMAGES = {
   backHead: "/coach_red2.png",
   body: "/coach_red3.png",
   ko: "/coach_red4.png",
+  damaged: "/coach_red5.png",
 };
 
 function App() {
@@ -532,7 +533,13 @@ function App() {
 
           <img
             className={`character ${reaction}`}
-            src={CHARACTER_IMAGES[characterPose] || CHARACTER_IMAGES.normal}
+            src={
+              characterPose === "ko"
+                ? CHARACTER_IMAGES.ko
+                : hp / MAX_HP <= 0.25 && characterPose === "normal"
+                ? CHARACTER_IMAGES.damaged
+                : CHARACTER_IMAGES[characterPose] || CHARACTER_IMAGES.normal
+            }
             alt="character"
             draggable="false"
           />
