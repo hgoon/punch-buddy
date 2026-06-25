@@ -12,6 +12,7 @@ const ZONES = {
     reaction: "hit-head",
     hitbox: "head-zone",
     weak: false,
+    pose: "backHead",
     line: ["아!", "어우!", "머리 울려!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
   },
   face: {
@@ -21,6 +22,7 @@ const ZONES = {
     reaction: "hit-face",
     hitbox: "face-zone",
     weak: false,
+    pose: "normal",
     line: ["으악!", "아야!", "얼굴은 반칙!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
   },
   philtrum: {
@@ -30,6 +32,7 @@ const ZONES = {
     reaction: "hit-face",
     hitbox: "philtrum-zone",
     weak: true,
+    pose: "normal",
     line: ["끄억!", "인중은 안 돼!", "눈물 난다!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
   },
   chest: {
@@ -39,6 +42,7 @@ const ZONES = {
     reaction: "hit-body",
     hitbox: "chest-zone",
     weak: true,
+    pose: "body",
     line: ["컥!", "숨 막혀!", "명치...!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
   },
   belly: {
@@ -48,6 +52,7 @@ const ZONES = {
     reaction: "hit-body",
     hitbox: "belly-zone",
     weak: false,
+    pose: "body",
     line: ["윽!", "배 아파!", "오우!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
   },
   groin: {
@@ -57,6 +62,7 @@ const ZONES = {
     reaction: "hit-groin",
     hitbox: "groin-zone",
     weak: true,
+    pose: "body",
     line: ["으아아악!", "그건 아니지!", "잠깐만!!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
   },
   leg: {
@@ -66,8 +72,15 @@ const ZONES = {
     reaction: "hit-leg",
     hitbox: "leg-zone",
     weak: false,
+    pose: "normal",
     line: ["휘청!", "다리 풀린다!", "아야!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
   },
+};
+
+const CHARACTER_IMAGES = {
+  normal: "/coach_red.png",
+  backHead: "/coach_red2.png",
+  body: "/coach_red3.png",
 };
 
 function App() {
@@ -92,6 +105,8 @@ function App() {
 
   const [log, setLog] = useState([]);
   const [reaction, setReaction] = useState("");
+  const [impact, setImpact] = useState("");
+  const [characterPose, setCharacterPose] = useState("normal");
   const [chargePercent, setChargePercent] = useState(0);
   const [floatingEffects, setFloatingEffects] = useState([]);
   const [speech, setSpeech] = useState("");
@@ -121,6 +136,8 @@ function App() {
     setStats(resetStats);
     setLog([]);
     setReaction("");
+    setImpact("");
+    setCharacterPose("normal");
     setChargePercent(0);
     setFloatingEffects([]);
     setSpeech("");
@@ -194,7 +211,17 @@ function App() {
       ? "critical"
       : zone.reaction;
 
+    const nextImpact = isUltra
+      ? "impact-ultra"
+      : isCritical
+      ? "impact-critical"
+      : zone.pose === "body"
+      ? "impact-body"
+      : "impact-small";
+
     setReaction(nextReaction);
+    setImpact(nextImpact);
+    setCharacterPose(zone.pose || "normal");
     setChargePercent(0);
 
     addFloatingEffect({
@@ -220,7 +247,9 @@ function App() {
 
     setTimeout(() => {
       setReaction("");
-    }, isUltra ? 700 : 460);
+      setImpact("");
+      setCharacterPose("normal");
+    }, isUltra ? 720 : 480);
   }
 
   function addFloatingEffect({ x, y, damage, critical, ultra, combo }) {
@@ -275,16 +304,16 @@ function App() {
     if (!navigator.vibrate) return;
 
     if (isUltra) {
-      navigator.vibrate([40, 40, 80]);
+      navigator.vibrate([50, 40, 110]);
       return;
     }
 
     if (isCritical) {
-      navigator.vibrate([30, 30, 40]);
+      navigator.vibrate([40, 25, 55]);
       return;
     }
 
-    navigator.vibrate(18);
+    navigator.vibrate(22);
   }
 
   function random(min, max) {
@@ -349,7 +378,7 @@ function App() {
       </section>
 
       <main
-        className={`stage ${reaction.includes("critical") ? "shake" : ""}`}
+        className={`stage ${impact}`}
         onContextMenu={(e) => e.preventDefault()}
       >
         {flash && <div className={`screen-flash ${flash}`} />}
@@ -359,7 +388,7 @@ function App() {
 
           <img
             className={`character ${reaction}`}
-            src="/coach_red.png"
+            src={CHARACTER_IMAGES[characterPose] || CHARACTER_IMAGES.normal}
             alt="character"
             draggable="false"
           />
