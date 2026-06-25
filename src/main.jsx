@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "./style.css";
 
 const COMBO_LIMIT_MS = 500;
+const MAX_HP = 3000;
 
 const ZONES = {
   head: {
@@ -81,6 +82,7 @@ const CHARACTER_IMAGES = {
   normal: "/coach_red.png",
   backHead: "/coach_red2.png",
   body: "/coach_red3.png",
+  ko: "/coach_red4.png",
 };
 
 function App() {
@@ -99,9 +101,16 @@ function App() {
   const [stats, setStats] = useState(() => {
     return JSON.parse(
       localStorage.getItem("punch_stats") ||
-        '{"hits":0,"totalDamage":0,"maxDamage":0,"combo":0}'
+        '{"hits":0,"totalDamage":0,"maxDamage":0,"combo":0,"koCount":0}'
     );
   });
+
+  const [hp, setHp] = useState(MAX_HP);
+  const [isKO, setIsKO] = useState(false);
+  const [isReviving, setIsReviving] = useState(false);
+  const [koCount, setKoCount] = useState(
+    () => JSON.parse(localStorage.getItem("punch_stats") || "{}").koCount || 0
+  );
 
   const [log, setLog] = useState([]);
   const [reaction, setReaction] = useState("");
@@ -131,10 +140,15 @@ function App() {
       totalDamage: 0,
       maxDamage: 0,
       combo: 0,
+      koCount: 0,
     };
 
     localStorage.setItem("punch_stats", JSON.stringify(resetStats));
     setStats(resetStats);
+    setKoCount(0);
+    setHp(MAX_HP);
+    setIsKO(false);
+    setIsReviving(false);
     setLog([]);
     setReaction("");
     setImpact("");
@@ -161,6 +175,7 @@ function App() {
 
   function endCharge(zoneKey, event) {
     event.preventDefault();
+    if (isKO || isReviving) return;
 
     const zone = ZONES[zoneKey];
     if (!zone) return;
@@ -222,10 +237,19 @@ function App() {
       totalDamage: stats.totalDamage + damage,
       maxDamage: Math.max(stats.maxDamage, damage),
       combo: nextCombo,
+      koCount: stats.koCount || 0,
     };
 
     setStats(nextStats);
     localStorage.setItem("punch_stats", JSON.stringify(nextStats));
+
+    setHp((prevHp) => {
+      const nextHp = Math.max(0, prevHp - damage);
+      if (nextHp === 0 && !isKO) {
+        triggerKO(nextStats);
+      }
+      return nextHp;
+    });
 
     const nextReaction = isUltra
       ? "super-critical"
@@ -276,6 +300,30 @@ function App() {
       setImpact("");
       setCharacterPose("normal");
     }, isUltra ? 720 : 480);
+  }
+
+  function triggerKO(latestStats) {
+    setIsKO(true);
+    setCharacterPose("ko");
+
+    const nextKoCount = (latestStats.koCount || 0) + 1;
+    const nextStats = { ...latestStats, koCount: nextKoCount };
+    setStats(nextStats);
+    setKoCount(nextKoCount);
+    localStorage.setItem("punch_stats", JSON.stringify(nextStats));
+
+    vibrate(true, false);
+
+    setTimeout(() => {
+      setIsKO(false);
+      setIsReviving(true);
+      setCharacterPose("normal");
+    }, 3000);
+
+    setTimeout(() => {
+      setIsReviving(false);
+      setHp(MAX_HP);
+    }, 5000);
   }
 
   function addFloatingEffect({ x, y, damage, critical, ultra, combo, chargeLevel }) {
@@ -391,18 +439,40 @@ function App() {
         </button>
       </header>
 
+      {/* HP Bar */}
+      <section className="hp-section">
+        <div className="hp-label-row">
+          <span className="hp-title">HP</span>
+          <span className="hp-value">{hp} / {MAX_HP}</span>
+        </div>
+        <div className="hp-bar-track">
+          <div
+            className={`hp-bar-fill ${
+              hp / MAX_HP > 0.5
+                ? "hp-green"
+                : hp / MAX_HP > 0.25
+                ? "hp-yellow"
+                : hp > 0
+                ? "hp-red"
+                : "hp-empty"
+            }`}
+            style={{ width: `${(hp / MAX_HP) * 100}%` }}
+          />
+        </div>
+      </section>
+
       <section className="stats">
         <div>
           <span>응원</span>
           <b>{stats.hits}</b>
         </div>
         <div>
-          <span>총 포인트</span>
-          <b>{stats.totalDamage}</b>
+          <span>KO</span>
+          <b>{koCount}</b>
         </div>
         <div>
-          <span>최고 한방</span>
-          <b>{stats.maxDamage}</b>
+          <span>총 포인트</span>
+          <b>{stats.totalDamage}</b>
         </div>
         <div>
           <span>콤보</span>
@@ -448,6 +518,23 @@ function App() {
             {item.combo >= 2 && <div className="hit-combo">{item.combo} COMBO</div>}
           </div>
         ))}
+
+        {/* KO 오버레이 */}
+        {(isKO || isReviving) && (
+          <div className={`ko-overlay ${isReviving ? "reviving" : "ko-active"}`}>
+            {isKO ? (
+              <>
+                <div className="ko-text">K.O!!</div>
+                <div className="ko-sub">재선임 중…</div>
+              </>
+            ) : (
+              <>
+                <div className="ko-revive-text">재선임 완료!</div>
+                <div className="ko-sub">새 감독 등장 🔴</div>
+              </>
+            )}
+          </div>
+        )}
 
         {Object.entries(ZONES).map(([key, zone]) => (
           <button
