@@ -374,6 +374,13 @@ input {
   animation: speechPop 0.82s ease-out forwards;
 }
 
+.speech-bubble.revive {
+  animation: speechPopLong 2.0s ease-out forwards;
+  background: #ffd335;
+  color: #111;
+  font-size: 13px;
+}
+
 .speech-bubble::after {
   content: "";
   position: absolute;
@@ -894,6 +901,13 @@ input {
     opacity: 0;
     transform: translateX(-50%) scale(0.95) translateY(-16px);
   }
+}
+
+@keyframes speechPopLong {
+  0%   { opacity: 0; transform: translateX(-50%) scale(0.55) translateY(10px); }
+  10%  { opacity: 1; transform: translateX(-50%) scale(1.05) translateY(0); }
+  80%  { opacity: 1; transform: translateX(-50%) scale(1) translateY(-4px); }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.95) translateY(-16px); }
 }
 
 @keyframes flashOut {
