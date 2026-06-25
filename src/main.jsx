@@ -24,47 +24,17 @@ function App() {
   const [reaction, setReaction] = useState("");
   const [chargePercent, setChargePercent] = useState(0);
   const [effect, setEffect] = useState("");
-  const [condition, setCondition] = useState({
-    bruise: false,
-    nosebleed: false,
-    bandage: false,
-    dizzy: false,
-  });
 
   const zones = {
-    head: {
-      name: "머리",
-      min: 8,
-      max: 16,
-      reaction: "hit-head",
-    },
-    face: {
-      name: "얼굴",
-      min: 10,
-      max: 20,
-      reaction: "hit-face",
-    },
-    body: {
-      name: "몸통",
-      min: 7,
-      max: 15,
-      reaction: "hit-body",
-    },
-    leg: {
-      name: "다리",
-      min: 5,
-      max: 12,
-      reaction: "hit-leg",
-    },
+    head: { name: "머리", min: 8, max: 16, reaction: "hit-head" },
+    face: { name: "얼굴", min: 10, max: 20, reaction: "hit-face" },
+    body: { name: "몸통", min: 7, max: 15, reaction: "hit-body" },
+    leg: { name: "다리", min: 5, max: 12, reaction: "hit-leg" },
   };
 
   function startGame() {
     const cleanName = nickname.trim();
-
-    if (!cleanName) {
-      alert("닉네임을 입력해줘!");
-      return;
-    }
+    if (!cleanName) return alert("닉네임을 입력해줘!");
 
     localStorage.setItem("punch_nickname", cleanName);
     setNickname(cleanName);
@@ -72,8 +42,6 @@ function App() {
   }
 
   function resetGame() {
-    localStorage.removeItem("punch_stats");
-
     const resetStats = {
       hits: 0,
       totalDamage: 0,
@@ -81,21 +49,17 @@ function App() {
       combo: 0,
     };
 
+    localStorage.setItem("punch_stats", JSON.stringify(resetStats));
     setStats(resetStats);
     setLog([]);
     setReaction("");
     setEffect("");
-    setCondition({
-      bruise: false,
-      nosebleed: false,
-      bandage: false,
-      dizzy: false,
-    });
+    setChargePercent(0);
   }
 
   function startCharge() {
     pressStart.current = Date.now();
-    setChargePercent(20);
+    setChargePercent(100);
   }
 
   function endCharge(zoneKey) {
@@ -107,12 +71,12 @@ function App() {
 
     const baseDamage = random(zone.min, zone.max);
     const isCritical = Math.random() < 0.12;
-    const isSuperCritical = holdTime > 1300 && Math.random() < 0.18;
+    const isUltra = holdTime > 1300 && Math.random() < 0.18;
 
     let damage = Math.floor(baseDamage * chargeMultiplier);
 
     if (isCritical) damage *= 3;
-    if (isSuperCritical) damage *= 5;
+    if (isUltra) damage *= 5;
 
     const nextStats = {
       hits: stats.hits + 1,
@@ -124,18 +88,16 @@ function App() {
     setStats(nextStats);
     localStorage.setItem("punch_stats", JSON.stringify(nextStats));
 
-    updateCondition(nextStats.hits, damage, zoneKey);
-
-    const nextReaction = isSuperCritical
+    const nextReaction = isUltra
       ? "super-critical"
       : isCritical
       ? "critical"
       : zone.reaction;
 
     setReaction(nextReaction);
-    setEffect(isSuperCritical ? "ULTRA!" : isCritical ? "CRITICAL!" : "HIT!");
+    setEffect(isUltra ? "ULTRA!" : isCritical ? "CRITICAL!" : "HIT!");
 
-    const message = isSuperCritical
+    const message = isUltra
       ? `🔥 ${zone.name} 울트라 크리티컬! ${damage} 데미지`
       : isCritical
       ? `💥 ${zone.name} 크리티컬! ${damage} 데미지`
@@ -148,19 +110,6 @@ function App() {
       setReaction("");
       setEffect("");
     }, 420);
-  }
-
-  function updateCondition(hits, damage, zoneKey) {
-    setCondition((prev) => {
-      const next = { ...prev };
-
-      if (hits >= 5 || zoneKey === "face") next.bruise = true;
-      if (hits >= 8 || (zoneKey === "face" && damage >= 35)) next.nosebleed = true;
-      if (hits >= 14 || damage >= 60) next.bandage = true;
-      if (damage >= 80) next.dizzy = true;
-
-      return next;
-    });
   }
 
   function random(min, max) {
@@ -222,19 +171,13 @@ function App() {
       <main className={`stage ${reaction.includes("critical") ? "shake" : ""}`}>
         <img
           className={`character ${reaction}`}
-          src="./coach_red.png"
+          src="/coach_red.png"
           alt="character"
         />
-
-        {condition.bruise && <div className="mark bruise">🟣</div>}
-        {condition.nosebleed && <div className="mark nosebleed">🩸</div>}
-        {condition.bandage && <div className="mark bandage">🩹</div>}
-        {condition.dizzy && <div className="mark dizzy">💫</div>}
 
         {effect && <div className="effect-text">{effect}</div>}
 
         <button
-          aria-label="head hit zone"
           className="hit-zone head-zone"
           onPointerDown={startCharge}
           onPointerUp={() => endCharge("head")}
@@ -242,7 +185,6 @@ function App() {
         />
 
         <button
-          aria-label="face hit zone"
           className="hit-zone face-zone"
           onPointerDown={startCharge}
           onPointerUp={() => endCharge("face")}
@@ -250,7 +192,6 @@ function App() {
         />
 
         <button
-          aria-label="body hit zone"
           className="hit-zone body-zone"
           onPointerDown={startCharge}
           onPointerUp={() => endCharge("body")}
@@ -258,7 +199,6 @@ function App() {
         />
 
         <button
-          aria-label="leg hit zone"
           className="hit-zone leg-zone"
           onPointerDown={startCharge}
           onPointerUp={() => endCharge("leg")}
