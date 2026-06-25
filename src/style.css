@@ -9,12 +9,18 @@
   -webkit-touch-callout: none;
 }
 
-html,
+html {
+  height: -webkit-fill-available;
+  height: 100%;
+}
+
 body,
 #root {
   margin: 0;
   width: 100%;
-  min-height: 100%;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
   overflow-x: hidden;
   background: #0f0f14;
   color: #ffffff;
@@ -25,7 +31,9 @@ body,
 
 body {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
 }
 
 button,
@@ -47,7 +55,9 @@ img {
 
 .app {
   width: min(100%, 430px);
-  min-height: 100svh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  flex: 1;
   margin: 0 auto;
   padding: calc(env(safe-area-inset-top, 0px) + 12px) 14px 18px;
   overflow-x: hidden;
@@ -258,7 +268,7 @@ input {
 .stage {
   position: relative;
   width: 100%;
-  height: clamp(350px, 48svh, 430px);
+  height: clamp(350px, 48dvh, 430px);
   margin-top: 8px;
   border: 2px solid #323238;
   border-radius: 24px;
@@ -897,7 +907,7 @@ input {
   }
 
   .stage {
-    height: clamp(340px, 47svh, 395px);
+    height: clamp(340px, 47dvh, 395px);
   }
 
   .target-wrap {
