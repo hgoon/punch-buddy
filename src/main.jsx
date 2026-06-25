@@ -7,7 +7,7 @@ const SUPABASE_URL = "https://ydgnnikfmesvosghsdeg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZ25uaWtmbWVzdm9zZ2hzZGVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzI3NTcsImV4cCI6MjA5NzQwODc1N30.2fZgjUNFJVm3PrUsfqeO8Eu9UwyFoHYj9ao1Js6VFCg";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const VERSION = "v3.0";
+const VERSION = "v3.1";
 
 const COMBO_LIMIT_MS = 500;
 const MAX_HP = 10000;
@@ -229,11 +229,14 @@ function App() {
           ].slice(0, 7));
         }
 
-        // KO 처리
+        // KO 처리 - 내가 KO시킨 경우는 triggerKO에서 이미 처리
         if (newHp === 0 && !koLockRef.current) {
           koLockRef.current = true;
           setLastKoBy(koBy || "");
           handleSharedKO(koBy);
+        } else if (newHp === 0 && koLockRef.current && lastKoBy !== koBy) {
+          // lastKoBy 업데이트만 (내가 KO시킨 후 서버 확정값으로 보정)
+          setLastKoBy(koBy || "");
         }
       })
       .subscribe();
@@ -517,6 +520,7 @@ function App() {
   function triggerKO(latestStats) {
     setIsKO(true);
     setCharacterPose("ko");
+    setLastKoBy(nickname); // 내가 KO시킴
     cancelCharge();
 
     if (timerRafRef.current) {
@@ -898,7 +902,7 @@ function App() {
                 <div className="ko-text">K.O!!</div>
                 {lastKoBy && (
                   <div className="ko-killer">
-                    {lastKoBy === nickname ? "⚡ 내가 KO시켰다!" : `💀 ${lastKoBy} 의 KO!`}
+                    {lastKoBy === nickname ? "⚡ 내가 KO시켰다!" : `💀 ${lastKoBy}의 KO!`}
                   </div>
                 )}
                 <div className="ko-sub">재선임 중…</div>
