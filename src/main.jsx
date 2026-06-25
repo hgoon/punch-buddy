@@ -7,7 +7,7 @@ const SUPABASE_URL = "https://ydgnnikfmesvosghsdeg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZ25uaWtmbWVzdm9zZ2hzZGVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzI3NTcsImV4cCI6MjA5NzQwODc1N30.2fZgjUNFJVm3PrUsfqeO8Eu9UwyFoHYj9ao1Js6VFCg";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const VERSION = "v3.3";
+const VERSION = "v3.4";
 
 const COMBO_LIMIT_MS = 500;
 const MAX_HP = 10000;
@@ -131,6 +131,7 @@ function App() {
   const [comments,     setComments]    = useState([]);
   const [commentInput, setCommentInput]= useState("");
   const [commentMsg,   setCommentMsg]  = useState("");
+  const [guideOpen,    setGuideOpen]   = useState(false);
 
   // ── Supabase 동기화 ─────────────────────────────
   const syncToSupabase = useCallback(async (nick, delta) => {
@@ -1011,6 +1012,16 @@ function App() {
       </section>
 
       <section className="comment-section">
+        <div className="comment-guide-toggle" onClick={() => setGuideOpen((v) => !v)}>
+          <span>📋 게시판 이용 안내</span>
+          <span>{guideOpen ? "▲ 접기" : "▼ 펼치기"}</span>
+        </div>
+        {guideOpen && (
+          <div className="comment-guide">
+            본 게시판은 모두가 즐겁게 이용하는 공간입니다. 욕설, 비방, 명예훼손 등 타인에게 불쾌감을 주는 댓글은 사전 경고 없이 삭제될 수 있으며, 운영 정책에 따라 이용이 제한될 수 있습니다. 성숙한 댓글 문화를 만들어 주세요.
+          </div>
+        )}
+
         <b>응원 댓글 <span className="comment-cost">💬 10만pt 소비</span></b>
 
         <div className="comment-list">
