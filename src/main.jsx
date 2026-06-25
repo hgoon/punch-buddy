@@ -786,7 +786,6 @@ function App() {
               onPointerCancel={cancelCharge}
               onPointerLeave={cancelCharge}
             />
-            />
           ))}
         </div>
       </main>
