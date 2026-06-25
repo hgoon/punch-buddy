@@ -1,424 +1,591 @@
-import React, { useRef, useState } from "react";
-import { createRoot } from "react-dom/client";
-import "./style.css";
-
-const COMBO_LIMIT_MS = 500;
-
-const ZONES = {
-  head: {
-    name: "머리",
-    min: 8,
-    max: 16,
-    reaction: "hit-head",
-    hitbox: "head-zone",
-    wound: { type: "bandage", emoji: "🩹", x: 47, y: 26 },
-  },
-  face: {
-    name: "얼굴",
-    min: 11,
-    max: 24,
-    reaction: "hit-face",
-    hitbox: "face-zone",
-    wound: { type: "nosebleed", emoji: "🩸", x: 51, y: 34 },
-  },
-  philtrum: {
-    name: "인중",
-    min: 15,
-    max: 30,
-    reaction: "hit-face",
-    hitbox: "philtrum-zone",
-    weak: true,
-    wound: { type: "nosebleed", emoji: "🩸", x: 50, y: 35 },
-  },
-  chest: {
-    name: "명치",
-    min: 16,
-    max: 32,
-    reaction: "hit-body",
-    hitbox: "chest-zone",
-    weak: true,
-    wound: { type: "bruise", emoji: "🟣", x: 51, y: 50 },
-  },
-  belly: {
-    name: "배",
-    min: 9,
-    max: 19,
-    reaction: "hit-body",
-    hitbox: "belly-zone",
-    wound: { type: "bruise", emoji: "🟣", x: 50, y: 58 },
-  },
-  groin: {
-    name: "급소",
-    min: 14,
-    max: 28,
-    reaction: "hit-groin",
-    hitbox: "groin-zone",
-    weak: true,
-    wound: { type: "dizzy", emoji: "💫", x: 52, y: 67 },
-  },
-  leg: {
-    name: "다리",
-    min: 6,
-    max: 14,
-    reaction: "hit-leg",
-    hitbox: "leg-zone",
-    wound: { type: "bandage", emoji: "🩹", x: 55, y: 79 },
-  },
-};
-
-function App() {
-  const pressStart = useRef(0);
-  const effectId = useRef(1);
-  const woundId = useRef(1);
-  const lastHitAt = useRef(0);
-  const comboResetTimer = useRef(null);
-
-  const [nickname, setNickname] = useState(
-    localStorage.getItem("punch_nickname") || ""
-  );
-  const [started, setStarted] = useState(
-    !!localStorage.getItem("punch_nickname")
-  );
-
-  const [stats, setStats] = useState(() => {
-    return JSON.parse(
-      localStorage.getItem("punch_stats") ||
-        '{"hits":0,"totalDamage":0,"maxDamage":0,"combo":0}'
-    );
-  });
-
-  const [log, setLog] = useState([]);
-  const [reaction, setReaction] = useState("");
-  const [chargePercent, setChargePercent] = useState(0);
-  const [floatingEffects, setFloatingEffects] = useState([]);
-  const [wounds, setWounds] = useState([]);
-
-  function startGame() {
-    const cleanName = nickname.trim();
-    if (!cleanName) {
-      alert("닉네임을 입력해줘!");
-      return;
-    }
-
-    localStorage.setItem("punch_nickname", cleanName);
-    setNickname(cleanName);
-    setStarted(true);
-  }
-
-  function resetGame() {
-    const resetStats = {
-      hits: 0,
-      totalDamage: 0,
-      maxDamage: 0,
-      combo: 0,
-    };
-
-    localStorage.setItem("punch_stats", JSON.stringify(resetStats));
-    setStats(resetStats);
-    setLog([]);
-    setReaction("");
-    setChargePercent(0);
-    setFloatingEffects([]);
-    setWounds([]);
-    lastHitAt.current = 0;
-
-    if (comboResetTimer.current) {
-      clearTimeout(comboResetTimer.current);
-      comboResetTimer.current = null;
-    }
-  }
-
-  function startCharge(event) {
-    event.preventDefault();
-    pressStart.current = Date.now();
-    setChargePercent(100);
-  }
-
-  function endCharge(zoneKey, event) {
-    event.preventDefault();
-
-    const zone = ZONES[zoneKey];
-    if (!zone) return;
-
-    const rect = event.currentTarget.parentElement.getBoundingClientRect();
-    const touchX = event.clientX - rect.left;
-    const touchY = event.clientY - rect.top;
-
-    const now = Date.now();
-    const isComboContinuing = now - lastHitAt.current <= COMBO_LIMIT_MS;
-    const nextCombo = isComboContinuing ? stats.combo + 1 : 1;
-    lastHitAt.current = now;
-
-    if (comboResetTimer.current) clearTimeout(comboResetTimer.current);
-
-    comboResetTimer.current = setTimeout(() => {
-      setStats((prev) => {
-        const next = { ...prev, combo: 0 };
-        localStorage.setItem("punch_stats", JSON.stringify(next));
-        return next;
-      });
-    }, COMBO_LIMIT_MS);
-
-    const holdTime = Math.min(now - pressStart.current, 2200);
-    const chargeMultiplier = 1 + holdTime / 850;
-
-    const baseDamage = random(zone.min, zone.max);
-    const weakBonus = zone.weak ? 0.16 : 0;
-    const comboBonus = Math.min(nextCombo * 0.02, 0.2);
-    const isCritical = Math.random() < 0.12 + weakBonus + comboBonus;
-    const isUltra = holdTime > 1300 && Math.random() < 0.22 + weakBonus;
-
-    let damage = Math.floor(baseDamage * chargeMultiplier);
-
-    if (isCritical) damage *= 3;
-    if (isUltra) damage *= 5;
-
-    const nextStats = {
-      hits: stats.hits + 1,
-      totalDamage: stats.totalDamage + damage,
-      maxDamage: Math.max(stats.maxDamage, damage),
-      combo: nextCombo,
-    };
-
-    setStats(nextStats);
-    localStorage.setItem("punch_stats", JSON.stringify(nextStats));
-
-    const nextReaction = isUltra
-      ? "super-critical"
-      : isCritical
-      ? "critical"
-      : zone.reaction;
-
-    setReaction(nextReaction);
-    setChargePercent(0);
-
-    addFloatingEffect({
-      x: touchX,
-      y: touchY,
-      damage,
-      critical: isCritical,
-      ultra: isUltra,
-      combo: nextCombo,
-    });
-
-    addWound(zone, damage, isCritical, isUltra);
-    vibrate(isUltra, isCritical);
-
-    const message = isUltra
-      ? `🔥 ${zone.name} 울트라 크리티컬! ${damage} 데미지`
-      : isCritical
-      ? `💥 ${zone.name} 크리티컬! ${damage} 데미지`
-      : `👊 ${zone.name} 타격! ${damage} 데미지`;
-
-    setLog((prev) => [message, ...prev].slice(0, 7));
-
-    setTimeout(() => {
-      setReaction("");
-    }, isUltra ? 700 : 460);
-  }
-
-  function addFloatingEffect({ x, y, damage, critical, ultra, combo }) {
-    const id = effectId.current++;
-
-    setFloatingEffects((prev) => [
-      ...prev,
-      {
-        id,
-        x,
-        y,
-        damage,
-        critical,
-        ultra,
-        combo,
-        label: ultra ? "ULTRA!" : critical ? "CRITICAL!" : "HIT!",
-        emoji: ultra ? "💥" : critical ? "💢" : "👊",
-      },
-    ]);
-
-    setTimeout(() => {
-      setFloatingEffects((prev) => prev.filter((item) => item.id !== id));
-    }, 850);
-  }
-
-  function addWound(zone, damage, isCritical, isUltra) {
-    if (!zone.wound) return;
-
-    const shouldAdd =
-      isUltra || isCritical || damage >= 30 || Math.random() < 0.12;
-
-    if (!shouldAdd) return;
-
-    const id = woundId.current++;
-    const spreadX = random(-2, 2);
-    const spreadY = random(-2, 2);
-
-    setWounds((prev) => {
-      const withoutSameTypeNearBy = prev.filter((item) => {
-        const sameType = item.type === zone.wound.type;
-        const nearX = Math.abs(item.x - zone.wound.x) <= 5;
-        const nearY = Math.abs(item.y - zone.wound.y) <= 5;
-        return !(sameType && nearX && nearY);
-      });
-
-      const next = [
-        ...withoutSameTypeNearBy,
-        {
-          id,
-          type: zone.wound.type,
-          emoji: zone.wound.emoji,
-          x: zone.wound.x + spreadX,
-          y: zone.wound.y + spreadY,
-          big: isUltra || damage >= 55,
-        },
-      ];
-
-      return next.slice(-5);
-    });
-  }
-
-  function vibrate(isUltra, isCritical) {
-    if (!navigator.vibrate) return;
-
-    if (isUltra) {
-      navigator.vibrate([40, 40, 80]);
-      return;
-    }
-
-    if (isCritical) {
-      navigator.vibrate([30, 30, 40]);
-      return;
-    }
-
-    navigator.vibrate(18);
-  }
-
-  function random(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
-
-  if (!started) {
-    return (
-      <div className="app intro">
-        <h1>응원하기 👊</h1>
-        <p>응원하고 싶은 캐릭터를 터치해보세요!</p>
-
-        <input
-          value={nickname}
-          onChange={(e) => setNickname(e.target.value)}
-          placeholder="닉네임 입력"
-          maxLength={12}
-        />
-
-        <button className="primary-button" onClick={startGame}>
-          게임 시작
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="app"
-      onContextMenu={(e) => e.preventDefault()}
-      onDragStart={(e) => e.preventDefault()}
-      onSelect={(e) => e.preventDefault()}
-    >
-      <header className="top">
-        <div>
-          <h1>응원하기 👊</h1>
-          <p>{nickname}</p>
-        </div>
-
-        <button className="small-button" onClick={resetGame}>
-          리셋
-        </button>
-      </header>
-
-      <section className="stats">
-        <div>
-          <span>타격</span>
-          <b>{stats.hits}</b>
-        </div>
-        <div>
-          <span>총 데미지</span>
-          <b>{stats.totalDamage}</b>
-        </div>
-        <div>
-          <span>최고 한방</span>
-          <b>{stats.maxDamage}</b>
-        </div>
-        <div>
-          <span>콤보</span>
-          <b>{stats.combo}</b>
-        </div>
-      </section>
-
-      <main
-        className={`stage ${reaction.includes("critical") ? "shake" : ""}`}
-        onContextMenu={(e) => e.preventDefault()}
-      >
-        <div className="target-wrap">
-          <img
-            className={`character ${reaction}`}
-            src="/coach_red.png"
-            alt="character"
-            draggable="false"
-          />
-
-          {wounds.map((wound) => (
-            <div
-              key={wound.id}
-              className={`wound ${wound.type} ${wound.big ? "big-wound" : ""}`}
-              style={{ left: `${wound.x}%`, top: `${wound.y}%` }}
-            >
-              {wound.emoji}
-            </div>
-          ))}
-        </div>
-
-        {floatingEffects.map((item) => (
-          <div
-            key={item.id}
-            className={`floating-effect ${
-              item.ultra ? "ultra-effect" : item.critical ? "critical-effect" : ""
-            }`}
-            style={{ left: item.x, top: item.y }}
-          >
-            <div className="hit-emoji">{item.emoji}</div>
-            <div className="hit-label">{item.label}</div>
-            <div className="hit-damage">-{item.damage}</div>
-            {item.combo >= 2 && <div className="hit-combo">{item.combo} COMBO</div>}
-          </div>
-        ))}
-
-        {Object.entries(ZONES).map(([key, zone]) => (
-          <button
-            key={key}
-            aria-label={`${zone.name} hit zone`}
-            className={`hit-zone ${zone.hitbox}`}
-            onPointerDown={startCharge}
-            onPointerUp={(event) => endCharge(key, event)}
-            onPointerCancel={() => setChargePercent(0)}
-          />
-        ))}
-      </main>
-
-      <section className="charge-box">
-        <div className="charge-label">꾹 눌러 응원 한방</div>
-        <div className="charge-bar">
-          <div style={{ width: `${chargePercent}%` }} />
-        </div>
-      </section>
-
-      <section className="log">
-        <b>타격 로그</b>
-        {log.length === 0 && <p>캐릭터를 터치해 응원해봐!</p>}
-        {log.map((item, index) => (
-          <p key={`${item}-${index}`}>{item}</p>
-        ))}
-      </section>
-    </div>
-  );
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: #0f0f14;
+  color: #ffffff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+}
+
+img {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+}
+
+.app {
+  width: 100%;
+  max-width: 430px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 18px 16px 28px;
+  background:
+    radial-gradient(circle at top, rgba(255, 211, 53, 0.08), transparent 35%),
+    #0f0f14;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+}
+
+h1 {
+  margin: 0;
+  color: #ffd335;
+  font-size: 38px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+}
+
+p {
+  margin: 0;
+}
+
+.intro p {
+  color: #d7d7df;
+  font-size: 15px;
+}
+
+input {
+  width: 100%;
+  margin-top: 18px;
+  padding: 15px 16px;
+  border: 0;
+  border-radius: 14px;
+  outline: none;
+  font-size: 17px;
+  background: #ffffff;
+  color: #111111;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.primary-button {
+  width: 100%;
+  padding: 15px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ff5151, #e72f2f);
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 900;
+  box-shadow: 0 8px 0 #9f1d1d;
+}
+
+.primary-button:active {
+  transform: translateY(4px);
+  box-shadow: 0 4px 0 #9f1d1d;
+}
+
+.top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.top p {
+  margin-top: 6px;
+  color: #f0f0f2;
+  font-size: 18px;
+}
+
+.small-button {
+  margin-top: 16px;
+  padding: 8px 11px;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #247bff;
+  font-weight: 800;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.stats div {
+  min-height: 70px;
+  padding: 10px 6px;
+  border-radius: 16px;
+  background: #202027;
+  text-align: center;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.stats div:nth-child(4) {
+  grid-column: 1 / 2;
+}
+
+.stats span {
+  display: inline-block;
+  color: #f1f1f4;
+  font-size: 14px;
+}
+
+.stats b {
+  display: inline-block;
+  margin-left: 2px;
+  color: #ffd335;
+  font-size: 32px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.stage {
+  position: relative;
+  height: 540px;
+  margin-top: 10px;
+  border: 2px solid #323238;
+  border-radius: 28px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 56%, rgba(255, 255, 255, 0.08), transparent 24%),
+    radial-gradient(circle at 50% 100%, rgba(255, 211, 53, 0.08), transparent 34%),
+    linear-gradient(180deg, #19191d 0%, #121216 100%);
+  touch-action: none;
+}
+
+.stage::before {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border-radius: 22px;
+  background:
+    linear-gradient(115deg, transparent 0 44%, rgba(255, 255, 255, 0.035) 45% 47%, transparent 48%),
+    repeating-radial-gradient(circle at center, rgba(255,255,255,0.025) 0 1px, transparent 1px 12px);
+  pointer-events: none;
+}
+
+.target-wrap {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  width: 400px;
+  height: 500px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.character {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 430px;
+  max-width: none;
+  transform: translateX(-50%);
+  transform-origin: 50% 74%;
+  user-select: none;
+  pointer-events: none;
+  filter: drop-shadow(0 18px 16px rgba(0, 0, 0, 0.55));
+  transition: transform 0.08s ease-out, filter 0.08s ease-out;
+  will-change: transform;
+}
+
+.character.hit-head {
+  animation: hitHead 0.34s ease-out;
+}
+
+.character.hit-face {
+  animation: hitFace 0.34s ease-out;
+}
+
+.character.hit-body {
+  animation: hitBody 0.34s ease-out;
+}
+
+.character.hit-groin {
+  animation: hitGroin 0.45s ease-out;
+}
+
+.character.hit-leg {
+  animation: hitLeg 0.34s ease-out;
+}
+
+.character.critical {
+  animation: criticalHit 0.42s ease-out;
+  filter: drop-shadow(0 0 20px rgba(255, 60, 60, 0.95))
+          drop-shadow(0 18px 16px rgba(0, 0, 0, 0.55));
+}
+
+.character.super-critical {
+  animation: ultraHit 0.62s ease-out;
+  filter: drop-shadow(0 0 28px rgba(255, 211, 53, 1))
+          drop-shadow(0 0 18px rgba(255, 60, 60, 0.95))
+          drop-shadow(0 18px 16px rgba(0, 0, 0, 0.55));
+}
+
+.wound {
+  position: absolute;
+  z-index: 12;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,0.5));
+  animation: woundPop 0.25s ease-out;
+  opacity: 0.9;
+}
+
+.wound.bruise {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 40% 35%, rgba(255,255,255,0.32) 0 12%, transparent 13%),
+    radial-gradient(circle, #8d46d6 0 42%, #55236f 72%, transparent 74%);
+  font-size: 0;
+}
+
+.wound.nosebleed {
+  font-size: 18px;
+}
+
+.wound.bandage {
+  font-size: 20px;
+  transform: translate(-50%, -50%) rotate(-18deg);
+}
+
+.wound.dizzy {
+  font-size: 25px;
+  animation: spinDizzy 1.1s linear infinite;
+}
+
+.big-wound.bruise {
+  width: 20px;
+  height: 20px;
+}
+
+.big-wound.nosebleed,
+.big-wound.bandage,
+.big-wound.dizzy {
+  font-size: 27px;
+}
+
+.shake {
+  animation: screenShake 0.35s ease-out;
+}
+
+.hit-zone {
+  position: absolute;
+  z-index: 20;
+  background: transparent;
+  border: 0;
+  outline: none;
+  touch-action: none;
+}
+
+/* 히트박스 확인용. 필요할 때만 주석 해제 */
+/* .hit-zone { background: rgba(0, 145, 255, 0.22); outline: 1px solid rgba(0,145,255,0.5); } */
+
+.head-zone {
+  left: 37%;
+  top: 27%;
+  width: 26%;
+  height: 9%;
+}
+
+.face-zone {
+  left: 36%;
+  top: 35%;
+  width: 28%;
+  height: 9%;
+}
+
+.philtrum-zone {
+  left: 44%;
+  top: 41%;
+  width: 12%;
+  height: 5%;
+}
+
+.chest-zone {
+  left: 37%;
+  top: 49%;
+  width: 26%;
+  height: 8%;
+}
+
+.belly-zone {
+  left: 36%;
+  top: 57%;
+  width: 28%;
+  height: 8%;
+}
+
+.groin-zone {
+  left: 40%;
+  top: 65%;
+  width: 20%;
+  height: 7%;
+}
+
+.leg-zone {
+  left: 31%;
+  top: 71%;
+  width: 38%;
+  height: 18%;
+}
+
+.floating-effect {
+  position: absolute;
+  z-index: 30;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  animation: floatUp 0.85s ease-out forwards;
+}
+
+.hit-emoji {
+  font-size: 36px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.55));
+}
+
+.hit-label {
+  margin-top: -2px;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 1000;
+  text-shadow:
+    2px 2px 0 #000,
+    0 0 14px rgba(255, 255, 255, 0.5);
+}
+
+.hit-damage {
+  color: #ff3d3d;
+  font-size: 28px;
+  font-weight: 1000;
+  text-shadow:
+    2px 2px 0 #000,
+    0 0 16px rgba(255, 60, 60, 0.85);
+}
+
+.hit-combo {
+  margin-top: -2px;
+  color: #65ff38;
+  font-size: 15px;
+  font-weight: 900;
+  text-shadow: 2px 2px 0 #000;
+}
+
+.critical-effect .hit-label,
+.critical-effect .hit-damage {
+  color: #ffd335;
+}
+
+.ultra-effect .hit-emoji {
+  font-size: 52px;
+}
+
+.ultra-effect .hit-label {
+  color: #ff3838;
+  font-size: 30px;
+}
+
+.ultra-effect .hit-damage {
+  color: #ffd335;
+  font-size: 42px;
+}
+
+.charge-box {
+  margin: 12px 0 14px;
+  text-align: center;
+}
+
+.charge-label {
+  margin-bottom: 8px;
+  color: #f3f3f4;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.charge-bar {
+  width: 100%;
+  height: 22px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #222229;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.06),
+    inset 0 2px 8px rgba(0,0,0,0.5);
+}
+
+.charge-bar div {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #65ff38, #ffd335, #ff3838);
+  box-shadow: 0 0 16px rgba(255, 211, 53, 0.5);
+  transition: width 0.18s ease;
+}
+
+.log {
+  min-height: 120px;
+  padding: 16px 16px 18px;
+  border-radius: 20px;
+  background: #1b1b22;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+}
+
+.log b {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 22px;
+}
+
+.log p {
+  margin: 8px 0;
+  color: #e9e9ed;
+  font-size: 16px;
+}
+
+@keyframes hitHead {
+  0% { transform: translateX(-50%) rotate(0deg); }
+  25% { transform: translateX(-54%) rotate(-10deg) translateY(-8px); }
+  55% { transform: translateX(-46%) rotate(6deg); }
+  100% { transform: translateX(-50%) rotate(0deg); }
+}
+
+@keyframes hitFace {
+  0% { transform: translateX(-50%) rotate(0deg); }
+  22% { transform: translateX(-62%) rotate(-15deg) scale(0.98); }
+  54% { transform: translateX(-42%) rotate(8deg); }
+  100% { transform: translateX(-50%) rotate(0deg); }
+}
+
+@keyframes hitBody {
+  0% { transform: translateX(-50%) translateY(0); }
+  28% { transform: translateX(-43%) translateY(12px) scale(0.94); }
+  58% { transform: translateX(-54%) translateY(-4px) scale(1.03); }
+  100% { transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes hitGroin {
+  0% { transform: translateX(-50%) translateY(0) rotate(0deg); }
+  22% { transform: translateX(-50%) translateY(-36px) rotate(-6deg) scale(0.98); }
+  45% { transform: translateX(-52%) translateY(10px) rotate(8deg) scale(0.94); }
+  70% { transform: translateX(-48%) translateY(-10px) rotate(-4deg); }
+  100% { transform: translateX(-50%) translateY(0) rotate(0deg); }
+}
+
+@keyframes hitLeg {
+  0% { transform: translateX(-50%) rotate(0deg); }
+  30% { transform: translateX(-56%) rotate(-7deg) translateY(16px); }
+  60% { transform: translateX(-46%) rotate(5deg) translateY(0); }
+  100% { transform: translateX(-50%) rotate(0deg); }
+}
+
+@keyframes criticalHit {
+  0% { transform: translateX(-50%) scale(1) rotate(0deg); }
+  20% { transform: translateX(-68%) scale(1.09) rotate(-17deg); }
+  55% { transform: translateX(-34%) scale(0.95) rotate(14deg); }
+  100% { transform: translateX(-50%) scale(1) rotate(0deg); }
+}
+
+@keyframes ultraHit {
+  0% { transform: translateX(-50%) translateY(0) scale(1) rotate(0deg); }
+  18% { transform: translateX(-78%) translateY(-48px) scale(1.18) rotate(-24deg); }
+  45% { transform: translateX(-20%) translateY(18px) scale(0.9) rotate(22deg); }
+  72% { transform: translateX(-57%) translateY(-14px) scale(1.06) rotate(-9deg); }
+  100% { transform: translateX(-50%) translateY(0) scale(1) rotate(0deg); }
+}
+
+@keyframes screenShake {
+  0% { transform: translateX(0); }
+  15% { transform: translateX(-9px); }
+  30% { transform: translateX(9px); }
+  45% { transform: translateX(-7px); }
+  60% { transform: translateX(7px); }
+  75% { transform: translateX(-3px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes floatUp {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -40%) scale(0.45) rotate(-10deg);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(-50%, -70%) scale(1.18) rotate(4deg);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -125%) scale(1) rotate(-2deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -175%) scale(0.85) rotate(0deg);
+  }
+}
+
+@keyframes woundPop {
+  from {
+    transform: translate(-50%, -50%) scale(0.25) rotate(-10deg);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+    opacity: 0.95;
+  }
+}
+
+@keyframes spinDizzy {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@media (max-width: 390px) {
+  .app {
+    padding: 16px 14px 24px;
+  }
+
+  h1 {
+    font-size: 34px;
+  }
+
+  .stage {
+    height: 515px;
+  }
+
+  .target-wrap {
+    width: 370px;
+    height: 475px;
+    bottom: 8px;
+  }
+
+  .character {
+    width: 405px;
+  }
+
+  .stats b {
+    font-size: 30px;
+  }
+}
