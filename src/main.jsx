@@ -566,7 +566,7 @@ function App() {
               position: "absolute",
               left: `${crosshairPos.x}%`,
               top:  `${crosshairPos.y}%`,
-              transform: "translate(-50%, -50%)",
+              transform: "translate(-50%, -140%)",
               zIndex: 19,
               pointerEvents: "none",
             }}
