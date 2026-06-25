@@ -7,7 +7,7 @@ const SUPABASE_URL = "https://ydgnnikfmesvosghsdeg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZ25uaWtmbWVzdm9zZ2hzZGVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzI3NTcsImV4cCI6MjA5NzQwODc1N30.2fZgjUNFJVm3PrUsfqeO8Eu9UwyFoHYj9ao1Js6VFCg";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const VERSION = "v3.4";
+const VERSION = "v3.5";
 
 const COMBO_LIMIT_MS = 500;
 const MAX_HP = 10000;
@@ -132,6 +132,8 @@ function App() {
   const [commentInput, setCommentInput]= useState("");
   const [commentMsg,   setCommentMsg]  = useState("");
   const [guideOpen,    setGuideOpen]   = useState(false);
+  const [isMaster,     setIsMaster]    = useState(false);
+  const masterKeyRef   = useRef("");     // 마스터 키 임시 보관
 
   // ── Supabase 동기화 ─────────────────────────────
   const syncToSupabase = useCallback(async (nick, delta) => {
@@ -383,18 +385,6 @@ function App() {
   function switchTab(tab) {
     setActiveTab(tab);
     fetchRanking(tab);
-  }
-
-  // ── 게임 시작 ───────────────────────────────────
-  async function startGame() {
-    const cleanName = nickname.trim();
-    if (!cleanName) { alert("닉네임을 입력해줘!"); return; }
-    localStorage.setItem("punch_nickname", cleanName);
-    setNickname(cleanName);
-    setStarted(true);
-    try {
-      await supabase.rpc("register_cheer_user", { p_nickname: cleanName });
-    } catch (e) { console.warn("register error", e); }
   }
 
   // ── 리셋 ────────────────────────────────────────
@@ -741,13 +731,92 @@ function App() {
   }
 
   // ── 인트로 ──────────────────────────────────────
+  const [showMasterKey, setShowMasterKey] = useState(false);
+  const [masterKeyInput, setMasterKeyInput] = useState("");
+  const [masterKeyError, setMasterKeyError] = useState("");
+
+  async function startGame() {
+    const cleanName = nickname.trim();
+    if (!cleanName) { alert("닉네임을 입력해줘!"); return; }
+
+    // 마스터 닉네임 확인
+    const { data: masterData } = await supabase
+      .from("cheer_masters")
+      .select("nickname")
+      .eq("nickname", cleanName)
+      .maybeSingle();
+
+    if (masterData) {
+      // 마스터 닉네임이면 키 입력 요청
+      setShowMasterKey(true);
+      return;
+    }
+
+    // 일반 유저 시작
+    await registerAndStart(cleanName, false);
+  }
+
+  async function submitMasterKey() {
+    const cleanName = nickname.trim();
+    const { data } = await supabase.rpc("verify_cheer_master", {
+      p_nickname:   cleanName,
+      p_master_key: masterKeyInput,
+    });
+
+    if (data === true) {
+      masterKeyRef.current = masterKeyInput; // 키 저장
+      setIsMaster(true);
+      await registerAndStart(cleanName, true);
+    } else {
+      setMasterKeyError("키가 틀렸어요. 일반 유저로 접속할게요.");
+      setTimeout(async () => {
+        setMasterKeyError("");
+        setShowMasterKey(false);
+        await registerAndStart(cleanName, false);
+      }, 1500);
+    }
+  }
+
+  async function registerAndStart(cleanName, master) {
+    localStorage.setItem("punch_nickname", cleanName);
+    setNickname(cleanName);
+    setIsMaster(master);
+    setStarted(true);
+    setShowMasterKey(false);
+    setMasterKeyInput("");
+    try {
+      await supabase.rpc("register_cheer_user", { p_nickname: cleanName });
+    } catch (e) { console.warn("register error", e); }
+  }
+
   if (!started) {
     return (
       <div className="app intro">
         <h1>응원하기 👊</h1>
         <p>응원하고 싶은 캐릭터를 터치해보세요!</p>
-        <input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="닉네임 입력" maxLength={12} />
-        <button className="primary-button" onClick={startGame}>게임 시작</button>
+        <input
+          value={nickname}
+          onChange={(e) => { setNickname(e.target.value); setShowMasterKey(false); setMasterKeyInput(""); setMasterKeyError(""); }}
+          placeholder="닉네임 입력"
+          maxLength={12}
+        />
+        {showMasterKey && (
+          <div className="master-key-box">
+            <p>🔐 마스터 닉네임이에요. 마스터 키를 입력해줘요.</p>
+            <input
+              value={masterKeyInput}
+              onChange={(e) => setMasterKeyInput(e.target.value)}
+              placeholder="마스터 키 입력"
+              type="password"
+              onKeyDown={(e) => e.key === "Enter" && submitMasterKey()}
+            />
+            {masterKeyError && <p className="master-key-error">{masterKeyError}</p>}
+            <button className="primary-button" onClick={submitMasterKey}>확인</button>
+          </div>
+        )}
+        {!showMasterKey && (
+          <button className="primary-button" onClick={startGame}>게임 시작</button>
+        )}
       </div>
     );
   }
@@ -1030,6 +1099,16 @@ function App() {
             <div key={i} className={`comment-row ${c.nickname === nickname ? "my-comment" : ""}`}>
               <span className="comment-nick">{c.nickname}</span>
               <span className="comment-content">{c.content}</span>
+              {isMaster && (
+                <button className="comment-delete" onClick={async () => {
+                  const { data } = await supabase.rpc("delete_cheer_comment", {
+                    p_id:         c.id,
+                    p_nickname:   nickname,
+                    p_master_key: masterKeyRef.current,
+                  });
+                  if (data) setComments((prev) => prev.filter((_, idx) => idx !== i));
+                }}>🗑️</button>
+              )}
             </div>
           ))}
         </div>
