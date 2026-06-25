@@ -7,7 +7,7 @@ const SUPABASE_URL = "https://ydgnnikfmesvosghsdeg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZ25uaWtmbWVzdm9zZ2hzZGVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzI3NTcsImV4cCI6MjA5NzQwODc1N30.2fZgjUNFJVm3PrUsfqeO8Eu9UwyFoHYj9ao1Js6VFCg";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const VERSION = "v4.1";
+const VERSION = "v4.2";
 
 const COMBO_LIMIT_MS = 500;
 const MAX_HP = 10000;
@@ -943,10 +943,10 @@ function App() {
           '{"hits":0,"totalDamage":0,"bestCombo":0,"combo":0,"koCount":0}');
 
         const synced = {
-          hits:        Math.max(local.hits || 0,        data.hits || 0),
-          totalDamage: Math.max(local.totalDamage || 0, data.total_damage || 0),
-          bestCombo:   Math.max(local.bestCombo || 0,   data.best_combo || 0),
-          koCount:     Math.max(local.koCount || 0,     data.ko_count || 0),
+          hits:        Math.max(local.hits || 0,      data.hits || 0),
+          totalDamage: data.total_damage || 0,  // 서버 값 우선 (댓글 차감 반영)
+          bestCombo:   Math.max(local.bestCombo || 0, data.best_combo || 0),
+          koCount:     Math.max(local.koCount || 0,   data.ko_count || 0),
           combo:       local.combo || 0,
         };
 
