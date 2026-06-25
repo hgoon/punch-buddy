@@ -319,7 +319,14 @@ function App() {
 
     const rect   = event.currentTarget.parentElement.getBoundingClientRect();
     const touchX = event.clientX - rect.left;
-    const touchY = event.clientY - rect.top;
+    const rawY   = event.clientY - rect.top;
+
+    // lv2(800ms) 이상 차지 시 조준경 오프셋만큼 위로 보정
+    // 조준경이 translate(-50%, -140%) 이므로 stage 높이의 약 40% 위로
+    const CROSSHAIR_OFFSET_RATIO = 0.4;
+    const touchY = chargeLevelLive >= 2
+      ? rawY - rect.height * CROSSHAIR_OFFSET_RATIO
+      : rawY;
 
     const now = Date.now();
     const isComboContinuing = now - lastHitAt.current <= COMBO_LIMIT_MS;
@@ -659,8 +666,17 @@ function App() {
           if (!isKO && !isReviving && !hitZoneTriggered.current) {
             const rect = e.currentTarget.getBoundingClientRect();
             const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            if (!isPixelHit(e.clientX, e.clientY)) {
+            const rawY = e.clientY - rect.top;
+            const y = chargeLevelLive >= 2
+              ? rawY - rect.height * 0.4
+              : rawY;
+
+            // 보정된 clientY로 픽셀 판정
+            const adjustedClientY = chargeLevelLive >= 2
+              ? e.clientY - rect.height * 0.4
+              : e.clientY;
+
+            if (!isPixelHit(e.clientX, adjustedClientY)) {
               triggerMiss(x, y);
             }
           }
@@ -671,8 +687,8 @@ function App() {
         {flash && <div className={`screen-flash ${flash}`} />}
         {charging && <div className={`charge-power charge-power-${chargeLevelLive}`}>POWER</div>}
 
-        {/* 조준경 */}
-        {charging && (
+        {/* 조준경 - lv2(800ms) 이상일 때만 표시 */}
+        {charging && chargeLevelLive >= 2 && (
           <div
             className={`crosshair lv${chargeLevelLive}`}
             style={{
