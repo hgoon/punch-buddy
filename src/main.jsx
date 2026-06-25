@@ -7,7 +7,7 @@ const SUPABASE_URL = "https://ydgnnikfmesvosghsdeg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZ25uaWtmbWVzdm9zZ2hzZGVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzI3NTcsImV4cCI6MjA5NzQwODc1N30.2fZgjUNFJVm3PrUsfqeO8Eu9UwyFoHYj9ao1Js6VFCg";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const VERSION = "v2.8";
+const VERSION = "v2.9";
 
 const COMBO_LIMIT_MS = 500;
 const MAX_HP = 10000;
@@ -213,10 +213,23 @@ function App() {
         schema: "public",
         table: "cheer_shared",
       }, (payload) => {
-        const newHp = payload.new.hp;
-        const koBy  = payload.new.last_ko_by;
+        const newHp   = payload.new.hp;
+        const koBy    = payload.new.last_ko_by;
+        const prevHp  = sharedHpRef.current;
+        const dmg     = prevHp - newHp;
+
         sharedHpRef.current = newHp;
         setHp(newHp);
+
+        // 다른 유저가 때린 경우 로그 추가
+        if (dmg > 0 && koBy !== nickname && !koLockRef.current) {
+          setLog((prev) => [
+            `👊 ${koBy || "???"}의 응원! ${dmg} 포인트`,
+            ...prev
+          ].slice(0, 7));
+        }
+
+        // KO 처리
         if (newHp === 0 && !koLockRef.current) {
           koLockRef.current = true;
           setLastKoBy(koBy || "");
@@ -457,15 +470,20 @@ function App() {
       syncToSupabase(nickname, { ...d });
     }
 
-    // 공용 HP 감소 (Supabase RPC)
+    // 공용 HP 감소 (Supabase RPC) + 즉시 로컬 반영
     supabase.rpc("damage_shared_hp", {
       p_damage:   damage,
       p_nickname: nickname,
     }).then(({ data }) => {
-      if (data && data.is_ko && !koLockRef.current) {
-        koLockRef.current = true;
-        setLastKoBy(nickname);
-        triggerKO(nextStats);
+      if (data) {
+        // RPC 결과로 즉시 로컬 HP 업데이트
+        setHp(data.hp);
+        sharedHpRef.current = data.hp;
+        if (data.is_ko && !koLockRef.current) {
+          koLockRef.current = true;
+          setLastKoBy(nickname);
+          triggerKO(nextStats);
+        }
       }
     });
 
