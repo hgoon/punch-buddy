@@ -1,0 +1,194 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #101014;
+  color: white;
+  font-family: system-ui, sans-serif;
+  touch-action: manipulation;
+}
+
+.app {
+  max-width: 430px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 18px;
+  text-align: center;
+}
+
+h1 {
+  margin: 10px 0 4px;
+  color: #ffd335;
+}
+
+input {
+  width: 100%;
+  padding: 15px;
+  border-radius: 14px;
+  border: none;
+  margin: 20px 0 10px;
+  font-size: 18px;
+}
+
+button {
+  border: none;
+}
+
+.app > button {
+  width: 100%;
+  padding: 15px;
+  border-radius: 14px;
+  background: #ff3838;
+  color: white;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.stats div {
+  background: #1d1d24;
+  border-radius: 14px;
+  padding: 10px;
+  font-size: 13px;
+}
+
+.stats b {
+  font-size: 22px;
+  color: #ffd335;
+}
+
+.stage {
+  position: relative;
+  height: 460px;
+  background: radial-gradient(circle, #222 0%, #111 70%);
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid #333;
+}
+
+.character {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  width: 310px;
+  transform: translateX(-50%);
+  user-select: none;
+  pointer-events: none;
+  transition: 0.15s;
+}
+
+.zone {
+  position: absolute;
+  background: transparent;
+  border: 0;
+}
+
+.head {
+  left: 145px;
+  top: 45px;
+  width: 130px;
+  height: 95px;
+}
+
+.face {
+  left: 135px;
+  top: 120px;
+  width: 150px;
+  height: 95px;
+}
+
+.body {
+  left: 120px;
+  top: 215px;
+  width: 190px;
+  height: 130px;
+}
+
+.leg {
+  left: 95px;
+  top: 335px;
+  width: 230px;
+  height: 105px;
+}
+
+.character.head {
+  transform: translateX(-50%) rotate(-5deg);
+}
+
+.character.face {
+  transform: translateX(-50%) rotate(8deg);
+}
+
+.character.body {
+  transform: translateX(-50%) translateX(18px);
+}
+
+.character.leg {
+  transform: translateX(-50%) rotate(-3deg) translateY(10px);
+}
+
+.character.critical {
+  transform: translateX(-50%) rotate(14deg) scale(0.96);
+  filter: drop-shadow(0 0 20px #ff3333);
+}
+
+.boom {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  transform: translate(-50%, -50%);
+  font-size: 42px;
+  font-weight: 900;
+  color: #ff3838;
+  text-shadow: 3px 3px #000;
+  animation: pop 0.35s ease;
+}
+
+@keyframes pop {
+  from {
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+}
+
+.charge {
+  height: 22px;
+  background: #222;
+  border-radius: 99px;
+  margin: 14px 0;
+  overflow: hidden;
+}
+
+.charge div {
+  height: 100%;
+  background: linear-gradient(90deg, #65ff38, #ffd335, #ff3838);
+  transition: 0.2s;
+}
+
+.log {
+  text-align: left;
+  background: #1a1a20;
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.log p {
+  margin: 7px 0;
+  color: #ddd;
+}
