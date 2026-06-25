@@ -7,7 +7,7 @@ const SUPABASE_URL = "https://ydgnnikfmesvosghsdeg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZ25uaWtmbWVzdm9zZ2hzZGVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzI3NTcsImV4cCI6MjA5NzQwODc1N30.2fZgjUNFJVm3PrUsfqeO8Eu9UwyFoHYj9ao1Js6VFCg";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const VERSION = "v2.0";
+const VERSION = "v2.1";
 
 const COMBO_LIMIT_MS = 500;
 const MAX_HP = 10000;
@@ -692,9 +692,11 @@ function App() {
           if (!isKO && !isReviving) {
             if (chargeLevelLive >= 2) {
               // lv2+ 차지: 손 뗀 위치 기준 픽셀 판정으로 타격 결정
-              const adjustedClientY = e.clientY - rect.height * 0.4;
+              const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
+              const offsetRatio = isTouchDevice ? 0.4 : 0;
+              const adjustedClientY = e.clientY - rect.height * offsetRatio;
               const x = e.clientX - rect.left;
-              const y = rawY - rect.height * 0.4;
+              const y = rawY - rect.height * offsetRatio;
 
               if (isPixelHit(e.clientX, adjustedClientY)) {
                 // 픽셀 히트 → 조준경 위치 기준으로 어느 존인지 판정
@@ -730,7 +732,9 @@ function App() {
               position: "absolute",
               left: `${crosshairPos.x}%`,
               top:  `${crosshairPos.y}%`,
-              transform: "translate(-50%, -140%)",
+              transform: window.matchMedia("(pointer: coarse)").matches
+                ? "translate(-50%, -140%)"  // 모바일 터치: 손가락 위로 올림
+                : "translate(-50%, -50%)",  // PC 마우스: 커서 위치 그대로
               zIndex: 19,
               pointerEvents: "none",
             }}
