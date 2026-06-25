@@ -2,6 +2,8 @@ import React, { useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
+const COMBO_LIMIT_MS = 500;
+
 const ZONES = {
   head: {
     name: "머리",
@@ -9,7 +11,7 @@ const ZONES = {
     max: 16,
     reaction: "hit-head",
     hitbox: "head-zone",
-    wound: { emoji: "🩹", x: 49, y: 24 },
+    wound: { type: "bandage", emoji: "🩹", x: 47, y: 26 },
   },
   face: {
     name: "얼굴",
@@ -17,7 +19,7 @@ const ZONES = {
     max: 24,
     reaction: "hit-face",
     hitbox: "face-zone",
-    wound: { emoji: "🩸", x: 51, y: 31 },
+    wound: { type: "nosebleed", emoji: "🩸", x: 51, y: 34 },
   },
   philtrum: {
     name: "인중",
@@ -26,7 +28,7 @@ const ZONES = {
     reaction: "hit-face",
     hitbox: "philtrum-zone",
     weak: true,
-    wound: { emoji: "🩸", x: 50, y: 33 },
+    wound: { type: "nosebleed", emoji: "🩸", x: 50, y: 35 },
   },
   chest: {
     name: "명치",
@@ -35,7 +37,7 @@ const ZONES = {
     reaction: "hit-body",
     hitbox: "chest-zone",
     weak: true,
-    wound: { emoji: "🟣", x: 50, y: 49 },
+    wound: { type: "bruise", emoji: "🟣", x: 51, y: 50 },
   },
   belly: {
     name: "배",
@@ -43,7 +45,7 @@ const ZONES = {
     max: 19,
     reaction: "hit-body",
     hitbox: "belly-zone",
-    wound: { emoji: "🟣", x: 49, y: 57 },
+    wound: { type: "bruise", emoji: "🟣", x: 50, y: 58 },
   },
   groin: {
     name: "급소",
@@ -52,7 +54,7 @@ const ZONES = {
     reaction: "hit-groin",
     hitbox: "groin-zone",
     weak: true,
-    wound: { emoji: "💫", x: 51, y: 68 },
+    wound: { type: "dizzy", emoji: "💫", x: 52, y: 67 },
   },
   leg: {
     name: "다리",
@@ -60,7 +62,7 @@ const ZONES = {
     max: 14,
     reaction: "hit-leg",
     hitbox: "leg-zone",
-    wound: { emoji: "🩹", x: 54, y: 78 },
+    wound: { type: "bandage", emoji: "🩹", x: 55, y: 79 },
   },
 };
 
@@ -68,6 +70,8 @@ function App() {
   const pressStart = useRef(0);
   const effectId = useRef(1);
   const woundId = useRef(1);
+  const lastHitAt = useRef(0);
+  const comboResetTimer = useRef(null);
 
   const [nickname, setNickname] = useState(
     localStorage.getItem("punch_nickname") || ""
@@ -116,6 +120,12 @@ function App() {
     setChargePercent(0);
     setFloatingEffects([]);
     setWounds([]);
+    lastHitAt.current = 0;
+
+    if (comboResetTimer.current) {
+      clearTimeout(comboResetTimer.current);
+      comboResetTimer.current = null;
+    }
   }
 
   function startCharge(event) {
@@ -134,12 +144,28 @@ function App() {
     const touchX = event.clientX - rect.left;
     const touchY = event.clientY - rect.top;
 
-    const holdTime = Math.min(Date.now() - pressStart.current, 2200);
+    const now = Date.now();
+    const isComboContinuing = now - lastHitAt.current <= COMBO_LIMIT_MS;
+    const nextCombo = isComboContinuing ? stats.combo + 1 : 1;
+    lastHitAt.current = now;
+
+    if (comboResetTimer.current) clearTimeout(comboResetTimer.current);
+
+    comboResetTimer.current = setTimeout(() => {
+      setStats((prev) => {
+        const next = { ...prev, combo: 0 };
+        localStorage.setItem("punch_stats", JSON.stringify(next));
+        return next;
+      });
+    }, COMBO_LIMIT_MS);
+
+    const holdTime = Math.min(now - pressStart.current, 2200);
     const chargeMultiplier = 1 + holdTime / 850;
 
     const baseDamage = random(zone.min, zone.max);
     const weakBonus = zone.weak ? 0.16 : 0;
-    const isCritical = Math.random() < 0.12 + weakBonus;
+    const comboBonus = Math.min(nextCombo * 0.02, 0.2);
+    const isCritical = Math.random() < 0.12 + weakBonus + comboBonus;
     const isUltra = holdTime > 1300 && Math.random() < 0.22 + weakBonus;
 
     let damage = Math.floor(baseDamage * chargeMultiplier);
@@ -151,7 +177,7 @@ function App() {
       hits: stats.hits + 1,
       totalDamage: stats.totalDamage + damage,
       maxDamage: Math.max(stats.maxDamage, damage),
-      combo: stats.combo + 1,
+      combo: nextCombo,
     };
 
     setStats(nextStats);
@@ -172,6 +198,7 @@ function App() {
       damage,
       critical: isCritical,
       ultra: isUltra,
+      combo: nextCombo,
     });
 
     addWound(zone, damage, isCritical, isUltra);
@@ -190,7 +217,7 @@ function App() {
     }, isUltra ? 700 : 460);
   }
 
-  function addFloatingEffect({ x, y, damage, critical, ultra }) {
+  function addFloatingEffect({ x, y, damage, critical, ultra, combo }) {
     const id = effectId.current++;
 
     setFloatingEffects((prev) => [
@@ -202,6 +229,7 @@ function App() {
         damage,
         critical,
         ultra,
+        combo,
         label: ultra ? "ULTRA!" : critical ? "CRITICAL!" : "HIT!",
         emoji: ultra ? "💥" : critical ? "💢" : "👊",
       },
@@ -216,27 +244,35 @@ function App() {
     if (!zone.wound) return;
 
     const shouldAdd =
-      isUltra || isCritical || damage >= 25 || Math.random() < 0.24;
+      isUltra || isCritical || damage >= 30 || Math.random() < 0.12;
 
     if (!shouldAdd) return;
 
     const id = woundId.current++;
-    const spreadX = random(-4, 4);
-    const spreadY = random(-3, 3);
+    const spreadX = random(-2, 2);
+    const spreadY = random(-2, 2);
 
     setWounds((prev) => {
+      const withoutSameTypeNearBy = prev.filter((item) => {
+        const sameType = item.type === zone.wound.type;
+        const nearX = Math.abs(item.x - zone.wound.x) <= 5;
+        const nearY = Math.abs(item.y - zone.wound.y) <= 5;
+        return !(sameType && nearX && nearY);
+      });
+
       const next = [
-        ...prev,
+        ...withoutSameTypeNearBy,
         {
           id,
-          emoji: isUltra ? "💫" : zone.wound.emoji,
+          type: zone.wound.type,
+          emoji: zone.wound.emoji,
           x: zone.wound.x + spreadX,
           y: zone.wound.y + spreadY,
-          big: isUltra || damage >= 45,
+          big: isUltra || damage >= 55,
         },
       ];
 
-      return next.slice(-8);
+      return next.slice(-5);
     });
   }
 
@@ -332,7 +368,7 @@ function App() {
           {wounds.map((wound) => (
             <div
               key={wound.id}
-              className={`wound ${wound.big ? "big-wound" : ""}`}
+              className={`wound ${wound.type} ${wound.big ? "big-wound" : ""}`}
               style={{ left: `${wound.x}%`, top: `${wound.y}%` }}
             >
               {wound.emoji}
@@ -351,6 +387,7 @@ function App() {
             <div className="hit-emoji">{item.emoji}</div>
             <div className="hit-label">{item.label}</div>
             <div className="hit-damage">-{item.damage}</div>
+            {item.combo >= 2 && <div className="hit-combo">{item.combo} COMBO</div>}
           </div>
         ))}
 
