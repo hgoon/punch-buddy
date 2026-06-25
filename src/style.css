@@ -458,8 +458,8 @@ input {
 /* ── 조준경 ─────────────────────────────────── */
 .crosshair {
   position: absolute;
-  width: 80px;
-  height: 80px;
+  width: 120px;
+  height: 120px;
   pointer-events: none;
 }
 
@@ -469,81 +469,99 @@ input {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 56px;
-  height: 56px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 50, 50, 0.7);
-  box-shadow: 0 0 10px rgba(255, 50, 50, 0.35);
-  transition: width 0.2s ease, height 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  border: 2.5px solid rgba(255, 50, 50, 0.95);
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.4),
+    0 0 14px rgba(255, 50, 50, 0.7),
+    inset 0 0 10px rgba(255, 50, 50, 0.15);
+  transition: width 0.18s ease, height 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-/* 가로선 */
+/* 십자선 */
 .crosshair-line {
   position: absolute;
-  background: rgba(255, 50, 50, 0.55);
-  box-shadow: 0 0 5px rgba(255, 50, 50, 0.35);
-  transition: background 0.2s ease;
+  background: rgba(255, 50, 50, 0.9);
+  box-shadow: 0 0 4px rgba(0,0,0,0.6), 0 0 8px rgba(255, 50, 50, 0.5);
+  transition: background 0.18s ease;
 }
 
 .crosshair-h {
   top: 50%;
-  left: -30px;
-  right: -30px;
-  height: 1px;
+  left: -45px;
+  right: -45px;
+  height: 2px;
   transform: translateY(-50%);
 }
 
 .crosshair-v {
   left: 50%;
-  top: -30px;
-  bottom: -30px;
-  width: 1px;
+  top: -45px;
+  bottom: -45px;
+  width: 2px;
   transform: translateX(-50%);
 }
 
-/* 단계별 원 좁혀짐 + 색상 강화 */
+/* lv1: 주황 */
 .crosshair.lv1 .crosshair-center {
-  width: 48px; height: 48px;
-  border-color: rgba(255, 170, 0, 0.75);
-  box-shadow: 0 0 12px rgba(255, 170, 0, 0.45);
+  width: 68px; height: 68px;
+  border-color: rgba(255, 170, 0, 0.98);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 0 18px rgba(255, 170, 0, 0.65);
 }
 .crosshair.lv1 .crosshair-line {
-  background: rgba(255, 170, 0, 0.6);
+  background: rgba(255, 170, 0, 0.92);
+  box-shadow: 0 0 4px rgba(0,0,0,0.6), 0 0 8px rgba(255, 170, 0, 0.5);
 }
 
+/* lv2: 진주황 */
 .crosshair.lv2 .crosshair-center {
-  width: 36px; height: 36px;
-  border-color: rgba(255, 100, 0, 0.85);
-  box-shadow: 0 0 16px rgba(255, 100, 0, 0.55);
+  width: 52px; height: 52px;
+  border-color: rgba(255, 100, 0, 1);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 0 22px rgba(255, 100, 0, 0.75);
 }
 .crosshair.lv2 .crosshair-line {
-  background: rgba(255, 100, 0, 0.65);
+  background: rgba(255, 100, 0, 0.95);
+  box-shadow: 0 0 4px rgba(0,0,0,0.6), 0 0 10px rgba(255, 100, 0, 0.6);
 }
 
+/* lv3: 빨강 + 맥박 */
 .crosshair.lv3 .crosshair-center {
-  width: 24px; height: 24px;
-  border-color: rgba(255, 30, 0, 0.95);
-  box-shadow: 0 0 20px rgba(255, 30, 0, 0.7);
-  animation: crosshairPulse 0.3s ease-in-out infinite alternate;
+  width: 36px; height: 36px;
+  border-color: rgba(255, 20, 0, 1);
+  border-width: 3px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 0 28px rgba(255, 20, 0, 0.85);
+  animation: crosshairPulse 0.28s ease-in-out infinite alternate;
 }
 .crosshair.lv3 .crosshair-line {
-  background: rgba(255, 30, 0, 0.7);
+  background: rgba(255, 20, 0, 1);
+  box-shadow: 0 0 4px rgba(0,0,0,0.6), 0 0 12px rgba(255, 20, 0, 0.7);
 }
 
+/* lv4: 풀차지 */
 .crosshair.lv4 .crosshair-center {
-  width: 12px; height: 12px;
-  border-color: rgba(255, 0, 0, 1);
-  box-shadow: 0 0 28px rgba(255, 0, 0, 0.9), 0 0 50px rgba(255, 0, 0, 0.4);
-  animation: crosshairPulse 0.15s ease-in-out infinite alternate;
+  width: 20px; height: 20px;
+  border-color: #ff0000;
+  border-width: 3px;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.5),
+    0 0 36px rgba(255, 0, 0, 1),
+    0 0 60px rgba(255, 0, 0, 0.5);
+  animation: crosshairPulse 0.14s ease-in-out infinite alternate;
 }
 .crosshair.lv4 .crosshair-line {
-  background: rgba(255, 0, 0, 0.8);
-  box-shadow: 0 0 8px rgba(255, 0, 0, 0.6);
+  background: #ff2020;
+  height: 2.5px;
+  box-shadow: 0 0 4px rgba(0,0,0,0.6), 0 0 14px rgba(255, 0, 0, 0.8);
+}
+.crosshair.lv4 .crosshair-v {
+  width: 2.5px;
 }
 
 @keyframes crosshairPulse {
-  from { transform: translate(-50%, -50%) scale(1);    opacity: 0.85; }
-  to   { transform: translate(-50%, -50%) scale(1.25); opacity: 1;    }
+  from { transform: translate(-50%, -50%) scale(1);    opacity: 0.88; }
+  to   { transform: translate(-50%, -50%) scale(1.22); opacity: 1;    }
 }
 
 /* ── POWER 차지 텍스트 ──────────────────────── */
