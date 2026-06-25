@@ -684,7 +684,7 @@ input {
 }
 
 /* 히트존 확인용 */
-.hit-zone { background: rgba(0, 145, 255, 0.22); outline: 1px solid rgba(0,145,255,0.5); }
+/* .hit-zone { background: rgba(0, 145, 255, 0.22); outline: 1px solid rgba(0,145,255,0.5); } */
 
 .head-zone {
   left: 37%;
