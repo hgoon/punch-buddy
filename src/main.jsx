@@ -7,7 +7,7 @@ const SUPABASE_URL = "https://ydgnnikfmesvosghsdeg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZ25uaWtmbWVzdm9zZ2hzZGVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzI3NTcsImV4cCI6MjA5NzQwODc1N30.2fZgjUNFJVm3PrUsfqeO8Eu9UwyFoHYj9ao1Js6VFCg";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const VERSION = "v3.8";
+const VERSION = "v3.9";
 
 const COMBO_LIMIT_MS = 500;
 const MAX_HP = 10000;
@@ -84,7 +84,10 @@ function App() {
   const [roundTimer,  setRoundTimer] = useState(0); // 현재 라운드 경과시간 ms
 
   const [nickname, setNickname] = useState(localStorage.getItem("punch_nickname") || "");
-  const [started,  setStarted]  = useState(false); // 항상 false로 시작, 아래 useEffect에서 처리
+  const [started,  setStarted]  = useState(false);
+  const [showMasterKey,  setShowMasterKey]  = useState(false);
+  const [masterKeyInput, setMasterKeyInput] = useState("");
+  const [masterKeyError, setMasterKeyError] = useState("");
 
   // 저장된 닉네임 있으면 마스터 여부 확인 후 자동 시작
   useEffect(() => {
@@ -94,8 +97,9 @@ function App() {
     supabase.from("cheer_masters").select("nickname").eq("nickname", saved).maybeSingle()
       .then(({ data }) => {
         if (data) {
-          // 마스터 닉네임 → 인트로에서 키 입력 필요
+          // 마스터 닉네임 → 키 입력창 표시
           setNickname(saved);
+          setShowMasterKey(true);
           setStarted(false);
         } else {
           // 일반 유저 → 바로 시작
@@ -753,15 +757,10 @@ function App() {
   }
 
   // ── 인트로 ──────────────────────────────────────
-  const [showMasterKey, setShowMasterKey] = useState(false);
-  const [masterKeyInput, setMasterKeyInput] = useState("");
-  const [masterKeyError, setMasterKeyError] = useState("");
-
   async function startGame() {
     const cleanName = nickname.trim();
     if (!cleanName) { alert("닉네임을 입력해줘!"); return; }
 
-    // 마스터 닉네임 확인
     const { data: masterData } = await supabase
       .from("cheer_masters")
       .select("nickname")
@@ -769,12 +768,10 @@ function App() {
       .maybeSingle();
 
     if (masterData) {
-      // 마스터 닉네임이면 키 입력 요청
       setShowMasterKey(true);
       return;
     }
 
-    // 일반 유저 시작
     await registerAndStart(cleanName, false);
   }
 
