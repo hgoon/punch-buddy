@@ -132,6 +132,15 @@ input {
   margin-bottom: 10px;
 }
 
+.version-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #666;
+  letter-spacing: 0;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
 .top p {
   margin-top: 5px;
   color: #f0f0f2;
@@ -490,18 +499,18 @@ input {
 
 .crosshair-h {
   top: 50%;
-  left: -45px;
-  right: -45px;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 130px;
   height: 2px;
-  transform: translateY(-50%);
 }
 
 .crosshair-v {
   left: 50%;
-  top: -45px;
-  bottom: -45px;
+  top: 50%;
+  transform: translate(-50%, -50%);
   width: 2px;
-  transform: translateX(-50%);
+  height: 130px;
 }
 
 /* lv1: 주황 */
@@ -664,7 +673,17 @@ input {
   touch-action: none;
 }
 
-/* 히트박스 확인용 */
+.hitzone-wrap {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hitzone-wrap .hit-zone {
+  pointer-events: all;
+}
+
+/* 히트존 확인용 */
 /* .hit-zone { background: rgba(0, 145, 255, 0.22); outline: 1px solid rgba(0,145,255,0.5); } */
 
 .head-zone {
@@ -1057,6 +1076,29 @@ input {
 .rank-button {
   background: linear-gradient(180deg, #ffd335, #e8b800) !important;
   color: #111 !important;
+}
+
+/* ── MISS 이펙트 ────────────────────────────── */
+.miss-effect {
+  position: absolute;
+  z-index: 30;
+  transform: translate(-50%, -50%);
+  font-size: 28px;
+  font-weight: 1000;
+  color: #aaaaaa;
+  letter-spacing: 2px;
+  pointer-events: none;
+  text-shadow:
+    2px 2px 0 #000,
+    0 0 12px rgba(255, 255, 255, 0.2);
+  animation: missFloat 0.7s ease-out forwards;
+}
+
+@keyframes missFloat {
+  0%   { opacity: 0; transform: translate(-50%, -40%) scale(0.6); }
+  20%  { opacity: 1; transform: translate(-50%, -60%) scale(1.1); }
+  70%  { opacity: 0.7; transform: translate(-50%, -100%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -130%) scale(0.9); }
 }
 
 /* ── 라운드 타이머 ───────────────────────────── */
