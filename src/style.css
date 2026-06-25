@@ -901,6 +901,131 @@ input {
   to { opacity: 0; }
 }
 
+/* ── 상단 버튼 그룹 ─────────────────────────── */
+.top-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin-top: 4px;
+}
+
+.rank-button {
+  background: linear-gradient(180deg, #ffd335, #e8b800) !important;
+  color: #111 !important;
+}
+
+/* ── 랭킹 화면 ──────────────────────────────── */
+.ranking-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.rank-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.rank-tab {
+  padding: 10px 4px;
+  border-radius: 14px;
+  background: #202027;
+  color: #888;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.4;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  letter-spacing: -0.3px;
+}
+
+.rank-tab.active {
+  background: linear-gradient(180deg, #ffd335, #e8b800);
+  color: #111;
+  box-shadow: 0 5px 0 rgba(0,0,0,0.3);
+}
+
+.rank-list {
+  border-radius: 18px;
+  background: #1b1b22;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+  overflow: hidden;
+}
+
+.rank-loading,
+.rank-empty {
+  padding: 48px 20px;
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+}
+
+.rank-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.rank-row:last-child {
+  border-bottom: none;
+}
+
+.rank-row.my-row {
+  background: rgba(255, 211, 53, 0.07);
+}
+
+.rank-num {
+  flex: 0 0 32px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 900;
+  color: #555;
+}
+
+.rank-num.gold   { font-size: 22px; }
+.rank-num.silver { font-size: 22px; }
+.rank-num.bronze { font-size: 22px; }
+
+.rank-nick {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 700;
+  color: #f0f0f2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rank-nick .me-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #ffd335;
+  margin-left: 4px;
+}
+
+.rank-val {
+  flex: 0 0 auto;
+  font-size: 17px;
+  font-weight: 950;
+  color: #ffd335;
+  text-align: right;
+  letter-spacing: -0.5px;
+}
+
+.rank-val em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  margin-left: 2px;
+}
+
+/* ── 미디어 쿼리 ─────────────────────────────── */
 @media (max-width: 390px) {
   .app {
     padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 16px;
