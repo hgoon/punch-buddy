@@ -7,7 +7,7 @@ const SUPABASE_URL = "https://ydgnnikfmesvosghsdeg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZ25uaWtmbWVzdm9zZ2hzZGVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzI3NTcsImV4cCI6MjA5NzQwODc1N30.2fZgjUNFJVm3PrUsfqeO8Eu9UwyFoHYj9ao1Js6VFCg";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const VERSION = "v2.1";
+const VERSION = "v2.2";
 
 const COMBO_LIMIT_MS = 500;
 const MAX_HP = 10000;
@@ -477,13 +477,19 @@ function App() {
     setTimeout(() => setFloatingEffects((prev) => prev.filter((i) => i.id !== id)), 850);
   }
 
-  // ── 좌표 기준으로 해당 히트존 찾기 ─────────────
-  function getZoneAtPoint(clientX, clientY) {
-    for (const [key] of Object.entries(ZONES)) {
-      const el = document.querySelector(`.${ZONES[key].hitbox}`);
-      if (!el) continue;
-      const r = el.getBoundingClientRect();
-      if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) {
+  // ── 조준경 % 좌표 기준으로 해당 존 찾기 ─────────
+  function getZoneAtPercent(xPct, yPct) {
+    const zoneRanges = {
+      head:     { left: 37, right: 63, top: 27, bottom: 36 },
+      face:     { left: 36, right: 64, top: 35, bottom: 44 },
+      philtrum: { left: 44, right: 56, top: 41, bottom: 46 },
+      chest:    { left: 37, right: 63, top: 49, bottom: 57 },
+      belly:    { left: 36, right: 64, top: 57, bottom: 65 },
+      groin:    { left: 40, right: 60, top: 65, bottom: 72 },
+      leg:      { left: 31, right: 69, top: 71, bottom: 89 },
+    };
+    for (const [key, r] of Object.entries(zoneRanges)) {
+      if (xPct >= r.left && xPct <= r.right && yPct >= r.top && yPct <= r.bottom) {
         return key;
       }
     }
@@ -691,21 +697,28 @@ function App() {
 
           if (!isKO && !isReviving) {
             if (chargeLevelLive >= 2) {
-              // lv2+ 차지: 손 뗀 위치 기준 픽셀 판정으로 타격 결정
+              // lv2+ 차지: 조준경 위치(% 좌표) 기준으로 존 판정
               const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
               const offsetRatio = isTouchDevice ? 0.4 : 0;
               const adjustedClientY = e.clientY - rect.height * offsetRatio;
               const x = e.clientX - rect.left;
               const y = rawY - rect.height * offsetRatio;
 
+              // 조준경 % 좌표로 픽셀 히트 판정
               if (isPixelHit(e.clientX, adjustedClientY)) {
-                // 픽셀 히트 → 조준경 위치 기준으로 어느 존인지 판정
-                const zone = getZoneAtPoint(e.clientX, adjustedClientY);
+                // 조준경이 가리키는 % 좌표로 존 찾기
+                const xPct = ((e.clientX - rect.left) / rect.width) * 100;
+                const yPct = (adjustedClientY - rect.top) / rect.height * 100;
+                const zone = getZoneAtPercent(xPct, yPct);
                 if (zone) {
                   endCharge(zone, e);
                   cancelCharge();
                   return;
                 }
+                // 픽셀은 히트인데 존이 없으면 가장 가까운 존으로
+                endCharge("belly", e);
+                cancelCharge();
+                return;
               }
               // 픽셀 미스
               triggerMiss(x, y);
