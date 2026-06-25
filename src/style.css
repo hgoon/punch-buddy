@@ -888,6 +888,8 @@ input {
 .comment-delete:active {
   opacity: 1;
 }
+
+.comment-guide-toggle {
   display: flex;
   justify-content: space-between;
   align-items: center;
