@@ -11,7 +11,7 @@ const ZONES = {
     max: 16,
     reaction: "hit-head",
     hitbox: "head-zone",
-    wound: { type: "bandage", emoji: "🩹", x: 47, y: 26 },
+    wound: { type: "bandage", emoji: "🩹", x: 43, y: 31 },
   },
   face: {
     name: "얼굴",
@@ -19,7 +19,7 @@ const ZONES = {
     max: 24,
     reaction: "hit-face",
     hitbox: "face-zone",
-    wound: { type: "nosebleed", emoji: "🩸", x: 51, y: 34 },
+    wound: { type: "nosebleed", emoji: "🩸", x: 51, y: 38 },
   },
   philtrum: {
     name: "인중",
@@ -28,7 +28,7 @@ const ZONES = {
     reaction: "hit-face",
     hitbox: "philtrum-zone",
     weak: true,
-    wound: { type: "nosebleed", emoji: "🩸", x: 50, y: 35 },
+    wound: { type: "nosebleed", emoji: "🩸", x: 50, y: 39 },
   },
   chest: {
     name: "명치",
@@ -37,7 +37,7 @@ const ZONES = {
     reaction: "hit-body",
     hitbox: "chest-zone",
     weak: true,
-    wound: { type: "bruise", emoji: "🟣", x: 51, y: 50 },
+    wound: { type: "bruise", emoji: "🟣", x: 50, y: 55 },
   },
   belly: {
     name: "배",
@@ -45,7 +45,7 @@ const ZONES = {
     max: 19,
     reaction: "hit-body",
     hitbox: "belly-zone",
-    wound: { type: "bruise", emoji: "🟣", x: 50, y: 58 },
+    wound: { type: "bruise", emoji: "🟣", x: 50, y: 62 },
   },
   groin: {
     name: "급소",
@@ -54,7 +54,7 @@ const ZONES = {
     reaction: "hit-groin",
     hitbox: "groin-zone",
     weak: true,
-    wound: { type: "dizzy", emoji: "💫", x: 52, y: 67 },
+    wound: { type: "dizzy", emoji: "💫", x: 50, y: 30 },
   },
   leg: {
     name: "다리",
@@ -62,7 +62,7 @@ const ZONES = {
     max: 14,
     reaction: "hit-leg",
     hitbox: "leg-zone",
-    wound: { type: "bandage", emoji: "🩹", x: 55, y: 79 },
+    wound: { type: "bandage", emoji: "🩹", x: 55, y: 80 },
   },
 };
 
@@ -243,36 +243,34 @@ function App() {
   function addWound(zone, damage, isCritical, isUltra) {
     if (!zone.wound) return;
 
+    // 너무 자주 상처가 생기면 지저분해 보여서 강한 타격 위주로만 표시
     const shouldAdd =
-      isUltra || isCritical || damage >= 30 || Math.random() < 0.12;
+      isUltra || isCritical || damage >= 38 || Math.random() < 0.07;
 
     if (!shouldAdd) return;
 
     const id = woundId.current++;
-    const spreadX = random(-2, 2);
-    const spreadY = random(-2, 2);
+    const spreadX = random(-1, 1);
+    const spreadY = random(-1, 1);
 
     setWounds((prev) => {
-      const withoutSameTypeNearBy = prev.filter((item) => {
-        const sameType = item.type === zone.wound.type;
-        const nearX = Math.abs(item.x - zone.wound.x) <= 5;
-        const nearY = Math.abs(item.y - zone.wound.y) <= 5;
-        return !(sameType && nearX && nearY);
-      });
+      // 같은 부위 상처는 누적하지 않고 최신 상태로 교체
+      const withoutSameType = prev.filter((item) => item.type !== zone.wound.type);
 
       const next = [
-        ...withoutSameTypeNearBy,
+        ...withoutSameType,
         {
           id,
           type: zone.wound.type,
           emoji: zone.wound.emoji,
           x: zone.wound.x + spreadX,
           y: zone.wound.y + spreadY,
-          big: isUltra || damage >= 55,
+          big: isUltra || damage >= 65,
         },
       ];
 
-      return next.slice(-5);
+      // 화면이 지저분해지지 않게 최대 4개만 유지
+      return next.slice(-4);
     });
   }
 
@@ -299,8 +297,8 @@ function App() {
   if (!started) {
     return (
       <div className="app intro">
-        <h1>혼쭐내기 👊</h1>
-        <p>캐릭터를 터치해서 스트레스를 날려보자!</p>
+        <h1>응원하기 👊</h1>
+        <p>응원하고 싶은 캐릭터를 터치해보세요!</p>
 
         <input
           value={nickname}
@@ -325,7 +323,7 @@ function App() {
     >
       <header className="top">
         <div>
-          <h1>혼쭐내기 👊</h1>
+          <h1>응원하기 👊</h1>
           <p>{nickname}</p>
         </div>
 
@@ -404,7 +402,7 @@ function App() {
       </main>
 
       <section className="charge-box">
-        <div className="charge-label">꾹 눌러 차지 공격</div>
+        <div className="charge-label">꾹 눌러 응원 한방</div>
         <div className="charge-bar">
           <div style={{ width: `${chargePercent}%` }} />
         </div>
@@ -412,7 +410,7 @@ function App() {
 
       <section className="log">
         <b>타격 로그</b>
-        {log.length === 0 && <p>캐릭터를 터치해봐!</p>}
+        {log.length === 0 && <p>캐릭터를 터치해 응원해봐!</p>}
         {log.map((item, index) => (
           <p key={`${item}-${index}`}>{item}</p>
         ))}
