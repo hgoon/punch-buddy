@@ -108,6 +108,7 @@ function App() {
   const [impact, setImpact] = useState("");
   const [characterPose, setCharacterPose] = useState("normal");
   const [chargePercent, setChargePercent] = useState(0);
+  const [charging, setCharging] = useState(false);
   const [floatingEffects, setFloatingEffects] = useState([]);
   const [speech, setSpeech] = useState("");
   const [flash, setFlash] = useState("");
@@ -139,6 +140,7 @@ function App() {
     setImpact("");
     setCharacterPose("normal");
     setChargePercent(0);
+    setCharging(false);
     setFloatingEffects([]);
     setSpeech("");
     setFlash("");
@@ -153,6 +155,7 @@ function App() {
   function startCharge(event) {
     event.preventDefault();
     pressStart.current = Date.now();
+    setCharging(true);
     setChargePercent(100);
   }
 
@@ -181,14 +184,33 @@ function App() {
       });
     }, COMBO_LIMIT_MS);
 
-    const holdTime = Math.min(now - pressStart.current, 2200);
-    const chargeMultiplier = 1 + holdTime / 850;
+    const holdTime = Math.min(now - pressStart.current, 2600);
+
+    let chargeMultiplier = 1;
+    let chargeLevel = "normal";
+
+    if (holdTime >= 2200) {
+      chargeMultiplier = random(8, 10);
+      chargeLevel = "max";
+    } else if (holdTime >= 1500) {
+      chargeMultiplier = random(5, 7);
+      chargeLevel = "big";
+    } else if (holdTime >= 800) {
+      chargeMultiplier = random(3, 4);
+      chargeLevel = "medium";
+    } else if (holdTime >= 300) {
+      chargeMultiplier = 2;
+      chargeLevel = "small";
+    }
 
     const baseDamage = random(zone.min, zone.max);
     const weakBonus = zone.weak ? 0.16 : 0;
     const comboBonus = Math.min(nextCombo * 0.02, 0.2);
     const isCritical = Math.random() < 0.12 + weakBonus + comboBonus;
-    const isUltra = holdTime > 1300 && Math.random() < 0.22 + weakBonus;
+    const isUltra =
+      chargeLevel === "max" ||
+      (chargeLevel === "big" && Math.random() < 0.45 + weakBonus) ||
+      (holdTime > 1300 && Math.random() < 0.22 + weakBonus);
 
     let damage = Math.floor(baseDamage * chargeMultiplier);
 
@@ -220,9 +242,10 @@ function App() {
       : "impact-small";
 
     setReaction(nextReaction);
-    setImpact(nextImpact);
+    setImpact(chargeLevel === "max" ? "impact-ultra" : chargeLevel === "big" ? "impact-critical" : nextImpact);
     setCharacterPose(zone.pose || "normal");
     setChargePercent(0);
+    setCharging(false);
 
     addFloatingEffect({
       x: touchX,
@@ -231,14 +254,17 @@ function App() {
       critical: isCritical,
       ultra: isUltra,
       combo: nextCombo,
+      chargeLevel,
     });
 
-    showSpeech(zone, isCritical, isUltra);
+    showSpeech(zone, isCritical, isUltra || chargeLevel === "max");
     showFlash(isCritical, isUltra);
     vibrate(isUltra, isCritical);
 
     const message = isUltra
-      ? `🔥 ${zone.name} 울트라 응원! ${damage} 포인트`
+      ? `🔥 ${zone.name} 풀차지 응원! ${damage} 포인트`
+      : chargeLevel === "big"
+      ? `⚡ ${zone.name} 강력 응원! ${damage} 포인트`
       : isCritical
       ? `💥 ${zone.name} 크리티컬 응원! ${damage} 포인트`
       : `👊 ${zone.name} 응원! ${damage} 포인트`;
@@ -252,7 +278,7 @@ function App() {
     }, isUltra ? 720 : 480);
   }
 
-  function addFloatingEffect({ x, y, damage, critical, ultra, combo }) {
+  function addFloatingEffect({ x, y, damage, critical, ultra, combo, chargeLevel }) {
     const id = effectId.current++;
 
     setFloatingEffects((prev) => [
@@ -265,8 +291,15 @@ function App() {
         critical,
         ultra,
         combo,
-        label: ultra ? "ULTRA!" : critical ? "CRITICAL!" : "HIT!",
-        emoji: ultra ? "💥" : critical ? "💢" : "👊",
+        label: ultra
+          ? "ULTRA!"
+          : chargeLevel === "big" || chargeLevel === "max"
+          ? "POWER!"
+          : critical
+          ? "CRITICAL!"
+          : "HIT!",
+        emoji: ultra ? "💥" : chargeLevel === "big" || chargeLevel === "max" ? "⚡" : critical ? "💢" : "👊",
+        chargeLevel,
       },
     ]);
 
@@ -378,10 +411,11 @@ function App() {
       </section>
 
       <main
-        className={`stage ${impact}`}
+        className={`stage ${impact} ${charging ? "charging" : ""}`}
         onContextMenu={(e) => e.preventDefault()}
       >
         {flash && <div className={`screen-flash ${flash}`} />}
+        {charging && <div className="charge-aura">POWER</div>}
 
         <div className="target-wrap">
           {speech && <div className="speech-bubble">{speech}</div>}
@@ -398,7 +432,13 @@ function App() {
           <div
             key={item.id}
             className={`floating-effect ${
-              item.ultra ? "ultra-effect" : item.critical ? "critical-effect" : ""
+              item.ultra
+                ? "ultra-effect"
+                : item.chargeLevel === "big" || item.chargeLevel === "max"
+                ? "power-effect"
+                : item.critical
+                ? "critical-effect"
+                : ""
             }`}
             style={{ left: item.x, top: item.y }}
           >
@@ -416,7 +456,10 @@ function App() {
             className={`hit-zone ${zone.hitbox}`}
             onPointerDown={startCharge}
             onPointerUp={(event) => endCharge(key, event)}
-            onPointerCancel={() => setChargePercent(0)}
+            onPointerCancel={() => {
+              setChargePercent(0);
+              setCharging(false);
+            }}
           />
         ))}
       </main>
