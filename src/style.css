@@ -113,7 +113,7 @@ input {
   box-shadow: 0 4px 0 #9f1d1d;
 }
 
-/* 상단: 모바일 첫 화면 기준으로 매우 압축 */
+/* 상단 */
 .top {
   display: flex;
   align-items: flex-start;
@@ -141,7 +141,75 @@ input {
   box-shadow: 0 5px 0 rgba(0, 0, 0, 0.28);
 }
 
-/* 점수판: 2x2 카드로 변경해서 가로 깨짐 방지 */
+/* ── HP Bar ─────────────────────────────────── */
+.hp-section {
+  margin-bottom: 10px;
+}
+
+.hp-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.hp-title {
+  font-size: 13px;
+  font-weight: 900;
+  color: #f0f0f2;
+  letter-spacing: 1px;
+}
+
+.hp-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #c0c0c8;
+}
+
+.hp-bar-track {
+  width: 100%;
+  height: 14px;
+  border-radius: 999px;
+  background: #1e1e25;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 2px 6px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.hp-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.22s ease, background 0.4s ease;
+}
+
+.hp-green {
+  background: linear-gradient(90deg, #3ddc6a, #65ff38);
+  box-shadow: 0 0 10px rgba(101, 255, 56, 0.55);
+}
+
+.hp-yellow {
+  background: linear-gradient(90deg, #e8b800, #ffd335);
+  box-shadow: 0 0 10px rgba(255, 211, 53, 0.55);
+  animation: hpPulse 0.7s ease-in-out infinite alternate;
+}
+
+.hp-red {
+  background: linear-gradient(90deg, #cc2020, #ff3838);
+  box-shadow: 0 0 12px rgba(255, 56, 56, 0.7);
+  animation: hpPulse 0.4s ease-in-out infinite alternate;
+}
+
+.hp-empty {
+  width: 0 !important;
+}
+
+@keyframes hpPulse {
+  from { filter: brightness(1); }
+  to   { filter: brightness(1.4); }
+}
+
+/* 점수판: 2x2 카드 */
 .stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -186,7 +254,7 @@ input {
   letter-spacing: -1px;
 }
 
-/* 게임판: 화면 안에 들어오도록 높이 자동 압축 */
+/* 게임판 */
 .stage {
   position: relative;
   width: 100%;
@@ -201,7 +269,7 @@ input {
     linear-gradient(180deg, #19191d 0%, #121216 100%);
   touch-action: none;
   box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,0.02),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
     0 14px 24px rgba(0, 0, 0, 0.22);
 }
 
@@ -212,11 +280,11 @@ input {
   border-radius: 19px;
   background:
     linear-gradient(115deg, transparent 0 44%, rgba(255, 255, 255, 0.035) 45% 47%, transparent 48%),
-    repeating-radial-gradient(circle at center, rgba(255,255,255,0.025) 0 1px, transparent 1px 12px);
+    repeating-radial-gradient(circle at center, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 12px);
   pointer-events: none;
 }
 
-/* 캐릭터를 중앙 하단에 안정적으로 배치 */
+/* 캐릭터 */
 .target-wrap {
   position: absolute;
   left: 50%;
@@ -340,7 +408,6 @@ input {
 .impact-ultra {
   animation: screenShakeUltra 0.48s ease-out;
 }
-
 
 .stage.charging {
   box-shadow:
@@ -540,8 +607,8 @@ input {
   border-radius: 999px;
   background: #222229;
   box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,0.06),
-    inset 0 2px 8px rgba(0,0,0,0.5);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .charge-bar div {
@@ -553,7 +620,7 @@ input {
   animation: chargePulse 0.55s ease-in-out infinite alternate;
 }
 
-/* 로그는 첫 화면을 방해하지 않게 컴팩트 */
+/* 로그 */
 .log {
   min-height: 92px;
   max-height: 156px;
@@ -561,7 +628,7 @@ input {
   padding: 13px 13px 15px;
   border-radius: 18px;
   background: #1b1b22;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
 .log b {
@@ -575,6 +642,71 @@ input {
   color: #e9e9ed;
   font-size: 14px;
   line-height: 1.25;
+}
+
+/* ── KO 오버레이 ─────────────────────────────── */
+.ko-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.ko-active {
+  background: rgba(10, 0, 0, 0.72);
+  animation: koFadeIn 0.25s ease-out;
+}
+
+.reviving {
+  background: rgba(10, 10, 10, 0.55);
+  animation: koFadeIn 0.35s ease-out;
+}
+
+.ko-text {
+  font-size: clamp(64px, 18vw, 88px);
+  font-weight: 950;
+  color: #ff3838;
+  letter-spacing: -3px;
+  line-height: 1;
+  text-shadow:
+    0 0 40px rgba(255, 56, 56, 0.9),
+    0 6px 0 #7a0000,
+    4px 4px 0 #000;
+  animation: koBounce 0.45s cubic-bezier(0.22, 1.5, 0.5, 1) forwards;
+}
+
+.ko-revive-text {
+  font-size: clamp(28px, 8vw, 40px);
+  font-weight: 950;
+  color: #ffd335;
+  letter-spacing: -1px;
+  text-shadow:
+    0 0 22px rgba(255, 211, 53, 0.8),
+    0 4px 0 #7a5a00;
+  animation: koBounce 0.35s cubic-bezier(0.22, 1.5, 0.5, 1) forwards;
+}
+
+.ko-sub {
+  font-size: 16px;
+  font-weight: 700;
+  color: #c8c8d0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+@keyframes koFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes koBounce {
+  0%   { transform: scale(0.3) rotate(-8deg); opacity: 0; }
+  60%  { transform: scale(1.12) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg);    opacity: 1; }
 }
 
 @keyframes chargePulse {
