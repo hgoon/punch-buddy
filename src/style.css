@@ -899,6 +899,14 @@ input {
   animation: koBounce 0.35s cubic-bezier(0.22, 1.5, 0.5, 1) forwards;
 }
 
+.ko-killer {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffd335;
+  text-shadow: 0 0 14px rgba(255, 211, 53, 0.7), 0 2px 4px rgba(0,0,0,0.6);
+  margin-top: -4px;
+}
+
 .ko-sub {
   font-size: 16px;
   font-weight: 700;
