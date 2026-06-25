@@ -1270,6 +1270,11 @@ input {
   margin-top: 4px;
 }
 
+.share-button {
+  background: linear-gradient(180deg, #4caf50, #388e3c) !important;
+  color: #fff !important;
+}
+
 .rank-button {
   background: linear-gradient(180deg, #ffd335, #e8b800) !important;
   color: #111 !important;
