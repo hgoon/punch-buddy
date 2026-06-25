@@ -988,6 +988,8 @@ input {
   color: #e9e9ed;
   line-height: 1.4;
   word-break: break-all;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .comment-input-wrap {
