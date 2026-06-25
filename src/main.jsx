@@ -443,13 +443,12 @@ function App() {
 
   // ── 랭킹 탭 값 ──────────────────────────────────
   function getRankValue(row, tabKey) {
-    if (tabKey === "best_ko_time") {
-      const ms = row.best_ko_time || 0;
-      if (ms === 0) return "-";
-      const sec = (ms / 1000).toFixed(2);
-      return `${sec}초`;
-    }
-    const map = { hits: row.hits, total_damage: row.total_damage, ko_count: row.ko_count };
+    const map = {
+      hits:         row.hits,
+      total_damage: row.total_damage,
+      ko_count:     row.ko_count,
+      best_combo:   row.best_combo,
+    };
     return (map[tabKey] ?? 0).toLocaleString();
   }
 
