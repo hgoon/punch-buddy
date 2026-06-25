@@ -309,7 +309,6 @@ function App() {
   // ── 타격 ────────────────────────────────────────
   function endCharge(zoneKey, event) {
     event.preventDefault();
-    event.stopPropagation(); // stage onPointerUp으로 버블링 방지
     hitZoneTriggered.current = true;
     if (isKO || isReviving) return;
 
@@ -646,6 +645,9 @@ function App() {
         <div><span>콤보</span><b>{stats.combo}</b></div>
       </section>
 
+      {/* 픽셀 판정용 숨겨진 canvas */}
+      <canvas ref={canvasRef} style={{ display: "none" }} />
+
       <main
         className={`stage ${impact} ${charging ? "charging" : ""}`}
         onContextMenu={(e) => e.preventDefault()}
@@ -703,6 +705,7 @@ function App() {
         >
           {speech && <div className={`speech-bubble${isReviveSpeech ? " revive" : ""}`}>{speech}</div>}
           <img
+            ref={characterImgRef}
             className={`character ${reaction}`}
             src={
               characterPose === "ko"
@@ -713,6 +716,12 @@ function App() {
             }
             alt="character"
             draggable="false"
+            onLoad={() => {
+              // 이미지 바뀌면 canvas 초기화해서 다시 그리도록
+              const canvas = canvasRef.current;
+              if (canvas) { canvas.width = 0; canvas.height = 0; }
+            }}
+            crossOrigin="anonymous"
           />
         </div>
 
