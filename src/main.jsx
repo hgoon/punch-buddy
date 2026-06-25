@@ -77,6 +77,8 @@ function App() {
   const sessionDelta  = useRef({ hits: 0, totalDamage: 0, koCount: 0, bestKoTime: 0 });
   const syncTimer     = useRef(null);
   const koStartAt     = useRef(0); // 현재 라운드 첫 타격 시각
+  const timerRafRef   = useRef(null); // 타이머 RAF
+  const [roundTimer,  setRoundTimer] = useState(0); // 현재 라운드 경과시간 ms
 
   const [nickname, setNickname] = useState(localStorage.getItem("punch_nickname") || "");
   const [started,  setStarted]  = useState(!!localStorage.getItem("punch_nickname"));
@@ -102,6 +104,7 @@ function App() {
   const [chargeLevelLive,setChargeLevelLive]= useState(0);
   const [floatingEffects,setFloatingEffects]= useState([]);
   const [speech,         setSpeech]         = useState("");
+  const [isReviveSpeech, setIsReviveSpeech] = useState(false);
   const [flash,          setFlash]          = useState("");
 
   // 랭킹
@@ -194,9 +197,14 @@ function App() {
     setLog([]);
     setReaction(""); setImpact(""); setCharacterPose("normal");
     setChargePercent(0); setCharging(false);
-    setFloatingEffects([]); setSpeech(""); setFlash("");
+    setFloatingEffects([]); setSpeech(""); setIsReviveSpeech(false); setFlash("");
     lastHitAt.current = 0;
     koStartAt.current = 0;
+    setRoundTimer(0);
+    if (timerRafRef.current) {
+      cancelAnimationFrame(timerRafRef.current);
+      timerRafRef.current = null;
+    }
     sessionDelta.current = { hits: 0, totalDamage: 0, koCount: 0, bestKoTime: 0 };
     if (comboResetTimer.current) { clearTimeout(comboResetTimer.current); comboResetTimer.current = null; }
   }
@@ -267,8 +275,15 @@ function App() {
     if (isCritical) damage *= 3;
     if (isUltra)    damage *= 5;
 
-    // 첫 타격 시각 기록 (라운드 시작)
-    if (koStartAt.current === 0) koStartAt.current = now;
+    // 첫 타격 시각 기록 (라운드 시작) + 타이머 시작
+    if (koStartAt.current === 0) {
+      koStartAt.current = now;
+      function tickTimer() {
+        setRoundTimer(Date.now() - koStartAt.current);
+        timerRafRef.current = requestAnimationFrame(tickTimer);
+      }
+      timerRafRef.current = requestAnimationFrame(tickTimer);
+    }
 
     const nextStats = {
       hits:        stats.hits + 1,
@@ -328,8 +343,14 @@ function App() {
     setCharacterPose("ko");
     cancelCharge();
 
+    // 타이머 정지
+    if (timerRafRef.current) {
+      cancelAnimationFrame(timerRafRef.current);
+      timerRafRef.current = null;
+    }
+
     // KO 소요시간 계산 (첫 타격 ~ KO 시점)
-    const koTime = koStartAt.current > 0 ? Date.now() - koStartAt.current : 0;
+    const koTime   = koStartAt.current > 0 ? Date.now() - koStartAt.current : 0;
     const prevBest = latestStats.bestKoTime || 0;
     const newBest  = koTime > 0
       ? (prevBest === 0 ? koTime : Math.min(prevBest, koTime))
@@ -341,19 +362,29 @@ function App() {
     setKoCount(nextKoCount);
     localStorage.setItem("punch_stats", JSON.stringify(nextStats));
 
-    // KO 델타 누적 후 즉시 동기화
+    // bestKoTime은 KO 시점 기록이므로 별도 즉시 동기화
+    // (hits/totalDamage 델타는 유지, koCount/bestKoTime만 덮어씀)
     const d = sessionDelta.current;
-    d.koCount    += 1;
-    d.bestKoTime  = newBest;
+    d.koCount   += 1;
+    d.bestKoTime = newBest;
     syncToSupabase(nickname, { ...d });
+    // 동기화 후 델타 초기화
+    sessionDelta.current = { hits: 0, totalDamage: 0, koCount: 0, bestKoTime: 0 };
 
-    // 다음 라운드를 위해 koStartAt 초기화
+    // 다음 라운드를 위해 초기화
     koStartAt.current = 0;
+    setRoundTimer(0);
 
     vibrate(true, false);
 
     setTimeout(() => { setIsKO(false); setIsReviving(true); setCharacterPose("normal"); }, 3000);
-    setTimeout(() => { setIsReviving(false); setHp(MAX_HP); }, 5000);
+    setTimeout(() => {
+      setIsReviving(false);
+      setHp(MAX_HP);
+      setSpeech("내 안에 뭔가가 나를 움직여 다시 왔습니다.");
+      setIsReviveSpeech(true);
+      setTimeout(() => { setSpeech(""); setIsReviveSpeech(false); }, 2000);
+    }, 5000);
   }
 
   // ── 이펙트 헬퍼 ─────────────────────────────────
@@ -505,8 +536,15 @@ function App() {
         {flash && <div className={`screen-flash ${flash}`} />}
         {charging && <div className={`charge-power charge-power-${chargeLevelLive}`}>POWER</div>}
 
+        {/* 라운드 타이머 */}
+        {koStartAt.current > 0 && !isKO && !isReviving && (
+          <div className="round-timer">
+            ⏱ {(roundTimer / 1000).toFixed(2)}s
+          </div>
+        )}
+
         <div className="target-wrap">
-          {speech && <div className="speech-bubble">{speech}</div>}
+          {speech && <div className={`speech-bubble${isReviveSpeech ? " revive" : ""}`}>{speech}</div>}
           <img
             className={`character ${reaction}`}
             src={
