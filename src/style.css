@@ -39,7 +39,7 @@ img {
   max-width: 430px;
   min-height: 100vh;
   margin: 0 auto;
-  padding: 18px 16px 28px;
+  padding: 12px 14px 22px;
   background:
     radial-gradient(circle at top, rgba(255, 211, 53, 0.08), transparent 35%),
     #0f0f14;
@@ -56,7 +56,7 @@ img {
 h1 {
   margin: 0;
   color: #ffd335;
-  font-size: 38px;
+  font-size: 32px;
   font-weight: 900;
   letter-spacing: -1px;
   text-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
@@ -105,17 +105,17 @@ input {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .top p {
-  margin-top: 6px;
+  margin-top: 4px;
   color: #f0f0f2;
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .small-button {
-  margin-top: 16px;
+  margin-top: 8px;
   padding: 8px 11px;
   border-radius: 9px;
   background: #ffffff;
@@ -125,48 +125,50 @@ input {
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 9px;
-  margin-bottom: 14px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.stats div,
+.stats div:nth-child(4) {
+  grid-column: auto;
 }
 
 .stats div {
-  min-height: 70px;
-  padding: 10px 6px;
-  border-radius: 16px;
+  min-height: 58px;
+  padding: 8px 4px;
+  border-radius: 14px;
   background: #202027;
   text-align: center;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
-.stats div:nth-child(4) {
-  grid-column: 1 / 2;
-}
-
 .stats span {
-  display: inline-block;
+  display: block;
   color: #f1f1f4;
-  font-size: 14px;
+  font-size: 12px;
+  line-height: 1.1;
 }
 
 .stats b {
-  display: inline-block;
-  margin-left: 2px;
+  display: block;
+  margin-top: 2px;
   color: #ffd335;
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 950;
   line-height: 1;
 }
 
 .stage {
   position: relative;
-  height: 540px;
-  margin-top: 10px;
+  height: 400px;
+  margin-top: 8px;
   border: 2px solid #323238;
-  border-radius: 28px;
+  border-radius: 24px;
   overflow: hidden;
   background:
-    radial-gradient(circle at 50% 56%, rgba(255, 255, 255, 0.08), transparent 24%),
+    radial-gradient(circle at 50% 58%, rgba(255, 255, 255, 0.08), transparent 24%),
     radial-gradient(circle at 50% 100%, rgba(255, 211, 53, 0.08), transparent 34%),
     linear-gradient(180deg, #19191d 0%, #121216 100%);
   touch-action: none;
@@ -175,8 +177,8 @@ input {
 .stage::before {
   content: "";
   position: absolute;
-  inset: 16px;
-  border-radius: 22px;
+  inset: 14px;
+  border-radius: 20px;
   background:
     linear-gradient(115deg, transparent 0 44%, rgba(255, 255, 255, 0.035) 45% 47%, transparent 48%),
     repeating-radial-gradient(circle at center, rgba(255,255,255,0.025) 0 1px, transparent 1px 12px);
@@ -186,9 +188,9 @@ input {
 .target-wrap {
   position: absolute;
   left: 50%;
-  bottom: 8px;
-  width: 400px;
-  height: 500px;
+  bottom: 2px;
+  width: 350px;
+  height: 390px;
   transform: translateX(-50%);
   pointer-events: none;
 }
@@ -197,7 +199,7 @@ input {
   position: absolute;
   left: 50%;
   bottom: 0;
-  width: 430px;
+  width: 370px;
   max-width: none;
   transform: translateX(-50%);
   transform-origin: 50% 74%;
@@ -245,16 +247,17 @@ input {
   position: absolute;
   z-index: 14;
   left: 50%;
-  top: 13%;
+  top: 9%;
   transform: translateX(-50%);
-  padding: 10px 14px;
+  max-width: 92%;
+  padding: 8px 12px;
   border-radius: 999px;
   background: #ffffff;
   color: #111111;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 900;
   white-space: nowrap;
-  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.32);
+  box-shadow: 0 7px 0 rgba(0, 0, 0, 0.32);
   animation: speechPop 0.82s ease-out forwards;
 }
 
@@ -262,11 +265,11 @@ input {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: -9px;
+  bottom: -8px;
   transform: translateX(-50%);
-  border-left: 9px solid transparent;
-  border-right: 9px solid transparent;
-  border-top: 10px solid #ffffff;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 9px solid #ffffff;
 }
 
 .screen-flash {
@@ -361,7 +364,7 @@ input {
 }
 
 .hit-emoji {
-  font-size: 36px;
+  font-size: 32px;
   line-height: 1;
   filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.55));
 }
@@ -369,7 +372,7 @@ input {
 .hit-label {
   margin-top: -2px;
   color: #ffffff;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 1000;
   text-shadow:
     2px 2px 0 #000,
@@ -378,7 +381,7 @@ input {
 
 .hit-damage {
   color: #65ff38;
-  font-size: 28px;
+  font-size: 25px;
   font-weight: 1000;
   text-shadow:
     2px 2px 0 #000,
@@ -388,7 +391,7 @@ input {
 .hit-combo {
   margin-top: -2px;
   color: #ffd335;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 900;
   text-shadow: 2px 2px 0 #000;
 }
@@ -399,34 +402,34 @@ input {
 }
 
 .ultra-effect .hit-emoji {
-  font-size: 52px;
+  font-size: 46px;
 }
 
 .ultra-effect .hit-label {
   color: #ff3838;
-  font-size: 30px;
+  font-size: 26px;
 }
 
 .ultra-effect .hit-damage {
   color: #ffd335;
-  font-size: 42px;
+  font-size: 36px;
 }
 
 .charge-box {
-  margin: 12px 0 14px;
+  margin: 8px 0 10px;
   text-align: center;
 }
 
 .charge-label {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: #f3f3f4;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 800;
 }
 
 .charge-bar {
   width: 100%;
-  height: 22px;
+  height: 16px;
   overflow: hidden;
   border-radius: 999px;
   background: #222229;
@@ -444,23 +447,23 @@ input {
 }
 
 .log {
-  min-height: 120px;
-  padding: 16px 16px 18px;
-  border-radius: 20px;
+  min-height: 110px;
+  padding: 14px 14px 16px;
+  border-radius: 18px;
   background: #1b1b22;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
 }
 
 .log b {
   display: block;
-  margin-bottom: 12px;
-  font-size: 22px;
+  margin-bottom: 10px;
+  font-size: 20px;
 }
 
 .log p {
-  margin: 8px 0;
+  margin: 7px 0;
   color: #e9e9ed;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 @keyframes hitHead {
@@ -567,30 +570,59 @@ input {
   to { opacity: 0; }
 }
 
+/* 작은 모바일에서는 첫 화면에 게임판이 보이도록 더 압축 */
 @media (max-width: 390px) {
   .app {
-    padding: 16px 14px 24px;
+    padding: 10px 12px 20px;
   }
 
   h1 {
-    font-size: 34px;
+    font-size: 30px;
   }
 
-  .stage {
-    height: 515px;
+  .top p {
+    font-size: 15px;
   }
 
-  .target-wrap {
-    width: 370px;
-    height: 475px;
-    bottom: 8px;
+  .small-button {
+    margin-top: 6px;
+    padding: 7px 10px;
   }
 
-  .character {
-    width: 405px;
+  .stats {
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .stats div {
+    min-height: 54px;
+    padding: 7px 3px;
+    border-radius: 13px;
+  }
+
+  .stats span {
+    font-size: 11px;
   }
 
   .stats b {
-    font-size: 30px;
+    font-size: 24px;
+  }
+
+  .stage {
+    height: 380px;
+  }
+
+  .target-wrap {
+    width: 330px;
+    height: 370px;
+    bottom: 2px;
+  }
+
+  .character {
+    width: 350px;
+  }
+
+  .charge-label {
+    font-size: 15px;
   }
 }
