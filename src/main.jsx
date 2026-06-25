@@ -395,7 +395,13 @@ function App() {
 
   // ── 랭킹 탭 값 ──────────────────────────────────
   function getRankValue(row, tabKey) {
-    const map = { hits: row.hits, total_damage: row.total_damage, ko_count: row.ko_count, max_damage: row.max_damage };
+    if (tabKey === "best_ko_time") {
+      const ms = row.best_ko_time || 0;
+      if (ms === 0) return "-";
+      const sec = (ms / 1000).toFixed(2);
+      return `${sec}초`;
+    }
+    const map = { hits: row.hits, total_damage: row.total_damage, ko_count: row.ko_count };
     return (map[tabKey] ?? 0).toLocaleString();
   }
 
@@ -443,7 +449,10 @@ function App() {
                 <span className={`rank-num ${idx === 0 ? "gold" : idx === 1 ? "silver" : idx === 2 ? "bronze" : ""}`}>
                   {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `${idx + 1}`}
                 </span>
-                <span className="rank-nick">{row.nickname}{row.nickname === nickname ? " 👈" : ""}</span>
+                <span className="rank-nick">
+                  {row.nickname}
+                  {row.nickname === nickname && <span className="me-tag">나 👈</span>}
+                </span>
                 <span className="rank-val">{getRankValue(row, activeTab)} <em>{tabInfo.unit}</em></span>
               </div>
             ))
