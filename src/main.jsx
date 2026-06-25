@@ -7,7 +7,7 @@ const SUPABASE_URL = "https://ydgnnikfmesvosghsdeg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZ25uaWtmbWVzdm9zZ2hzZGVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzI3NTcsImV4cCI6MjA5NzQwODc1N30.2fZgjUNFJVm3PrUsfqeO8Eu9UwyFoHYj9ao1Js6VFCg";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const VERSION = "v2.2";
+const VERSION = "v2.3";
 
 const COMBO_LIMIT_MS = 500;
 const MAX_HP = 10000;
@@ -477,19 +477,16 @@ function App() {
     setTimeout(() => setFloatingEffects((prev) => prev.filter((i) => i.id !== id)), 850);
   }
 
-  // ── 조준경 % 좌표 기준으로 해당 존 찾기 ─────────
-  function getZoneAtPercent(xPct, yPct) {
-    const zoneRanges = {
-      head:     { left: 37, right: 63, top: 27, bottom: 36 },
-      face:     { left: 36, right: 64, top: 35, bottom: 44 },
-      philtrum: { left: 44, right: 56, top: 41, bottom: 46 },
-      chest:    { left: 37, right: 63, top: 49, bottom: 57 },
-      belly:    { left: 36, right: 64, top: 57, bottom: 65 },
-      groin:    { left: 40, right: 60, top: 65, bottom: 72 },
-      leg:      { left: 31, right: 69, top: 71, bottom: 89 },
-    };
-    for (const [key, r] of Object.entries(zoneRanges)) {
-      if (xPct >= r.left && xPct <= r.right && yPct >= r.top && yPct <= r.bottom) {
+  // ── 조준경 좌표 기준으로 해당 존 찾기 (DOM + dodgeOffset 보정) ──
+  function getZoneAtPercent(clientX, clientY) {
+    for (const [key, zone] of Object.entries(ZONES)) {
+      const el = document.querySelector(`.${zone.hitbox}`);
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      // dodgeOffset만큼 히트존이 이동해 있으므로 보정
+      const left  = r.left  + dodgeOffset;
+      const right = r.right + dodgeOffset;
+      if (clientX >= left && clientX <= right && clientY >= r.top && clientY <= r.bottom) {
         return key;
       }
     }
@@ -706,10 +703,8 @@ function App() {
 
               // 조준경 % 좌표로 픽셀 히트 판정
               if (isPixelHit(e.clientX, adjustedClientY)) {
-                // 조준경이 가리키는 % 좌표로 존 찾기
-                const xPct = ((e.clientX - rect.left) / rect.width) * 100;
-                const yPct = (adjustedClientY - rect.top) / rect.height * 100;
-                const zone = getZoneAtPercent(xPct, yPct);
+                // 조준경이 가리키는 좌표로 존 찾기
+                const zone = getZoneAtPercent(e.clientX, adjustedClientY);
                 if (zone) {
                   endCharge(zone, e);
                   cancelCharge();
