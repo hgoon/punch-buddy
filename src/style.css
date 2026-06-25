@@ -9,7 +9,10 @@
 html,
 body {
   margin: 0;
+  width: 100%;
+  max-width: 100%;
   min-height: 100%;
+  overflow-x: hidden;
   background: #0f0f14;
   color: #ffffff;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -40,6 +43,7 @@ img {
   min-height: 100vh;
   margin: 0 auto;
   padding: 12px 14px 22px;
+  overflow-x: hidden;
   background:
     radial-gradient(circle at top, rgba(255, 211, 53, 0.08), transparent 35%),
     #0f0f14;
@@ -162,6 +166,8 @@ input {
 
 .stage {
   position: relative;
+  width: 100%;
+  max-width: 100%;
   height: 400px;
   margin-top: 8px;
   border: 2px solid #323238;
@@ -189,7 +195,7 @@ input {
   position: absolute;
   left: 50%;
   bottom: 2px;
-  width: 350px;
+  width: min(350px, 96vw);
   height: 390px;
   transform: translateX(-50%);
   pointer-events: none;
@@ -199,7 +205,7 @@ input {
   position: absolute;
   left: 50%;
   bottom: 0;
-  width: 370px;
+  width: min(370px, 102vw);
   max-width: none;
   transform: translateX(-50%);
   transform-origin: 50% 74%;
@@ -570,6 +576,20 @@ input {
   to { opacity: 0; }
 }
 
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.top,
+.stats,
+.stage,
+.charge-box,
+.log {
+  max-width: 100%;
+}
+
 /* 작은 모바일에서는 첫 화면에 게임판이 보이도록 더 압축 */
 @media (max-width: 390px) {
   .app {
@@ -613,13 +633,13 @@ input {
   }
 
   .target-wrap {
-    width: 330px;
+    width: min(330px, 94vw);
     height: 370px;
     bottom: 2px;
   }
 
   .character {
-    width: 350px;
+    width: min(350px, 100vw);
   }
 
   .charge-label {
