@@ -118,6 +118,8 @@ function App() {
   const [characterPose, setCharacterPose] = useState("normal");
   const [chargePercent, setChargePercent] = useState(0);
   const [charging, setCharging] = useState(false);
+  const [chargeLevelLive, setChargeLevelLive] = useState(0); // 0~4 단계
+  const chargeRafRef = useRef(null);
   const [floatingEffects, setFloatingEffects] = useState([]);
   const [speech, setSpeech] = useState("");
   const [flash, setFlash] = useState("");
@@ -171,6 +173,19 @@ function App() {
     pressStart.current = Date.now();
     setCharging(true);
     setChargePercent(100);
+    setChargeLevelLive(0);
+
+    function tick() {
+      const elapsed = Date.now() - pressStart.current;
+      let level = 0;
+      if (elapsed >= 2200) level = 4;
+      else if (elapsed >= 1500) level = 3;
+      else if (elapsed >= 800) level = 2;
+      else if (elapsed >= 300) level = 1;
+      setChargeLevelLive(level);
+      chargeRafRef.current = requestAnimationFrame(tick);
+    }
+    chargeRafRef.current = requestAnimationFrame(tick);
   }
 
   function endCharge(zoneKey, event) {
@@ -270,6 +285,11 @@ function App() {
     setCharacterPose(zone.pose || "normal");
     setChargePercent(0);
     setCharging(false);
+    setChargeLevelLive(0);
+    if (chargeRafRef.current) {
+      cancelAnimationFrame(chargeRafRef.current);
+      chargeRafRef.current = null;
+    }
 
     addFloatingEffect({
       x: touchX,
@@ -307,6 +327,11 @@ function App() {
     setCharacterPose("ko");
     setCharging(false);
     setChargePercent(0);
+    setChargeLevelLive(0);
+    if (chargeRafRef.current) {
+      cancelAnimationFrame(chargeRafRef.current);
+      chargeRafRef.current = null;
+    }
 
     const nextKoCount = (latestStats.koCount || 0) + 1;
     const nextStats = { ...latestStats, koCount: nextKoCount };
@@ -488,10 +513,19 @@ function App() {
         onPointerUp={() => {
           setChargePercent(0);
           setCharging(false);
+          setChargeLevelLive(0);
+          if (chargeRafRef.current) {
+            cancelAnimationFrame(chargeRafRef.current);
+            chargeRafRef.current = null;
+          }
         }}
       >
         {flash && <div className={`screen-flash ${flash}`} />}
-        {charging && <div className="charge-aura">POWER</div>}
+        {charging && (
+          <div className={`charge-power charge-power-${chargeLevelLive}`}>
+            POWER
+          </div>
+        )}
 
         <div className="target-wrap">
           {speech && <div className="speech-bubble">{speech}</div>}
@@ -552,10 +586,20 @@ function App() {
             onPointerCancel={() => {
               setChargePercent(0);
               setCharging(false);
+              setChargeLevelLive(0);
+              if (chargeRafRef.current) {
+                cancelAnimationFrame(chargeRafRef.current);
+                chargeRafRef.current = null;
+              }
             }}
             onPointerLeave={() => {
               setChargePercent(0);
               setCharging(false);
+              setChargeLevelLive(0);
+              if (chargeRafRef.current) {
+                cancelAnimationFrame(chargeRafRef.current);
+                chargeRafRef.current = null;
+              }
             }}
           />
         ))}
