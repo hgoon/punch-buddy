@@ -318,11 +318,12 @@ function App() {
     if (!zone) return;
 
     const rect   = event.currentTarget.parentElement.getBoundingClientRect();
+
+    // 손가락 뗄 때 위치 기준 (onPointerUp의 실제 좌표)
     const touchX = event.clientX - rect.left;
     const rawY   = event.clientY - rect.top;
 
     // lv2(800ms) 이상 차지 시 조준경 오프셋만큼 위로 보정
-    // 조준경이 translate(-50%, -140%) 이므로 stage 높이의 약 40% 위로
     const CROSSHAIR_OFFSET_RATIO = 0.4;
     const touchY = chargeLevelLive >= 2
       ? rawY - rect.height * CROSSHAIR_OFFSET_RATIO
@@ -777,7 +778,10 @@ function App() {
               onPointerLeave={cancelCharge}
               onPointerMove={(event) => {
                 if (!charging) return;
-                const rect = event.currentTarget.parentElement.parentElement.getBoundingClientRect();
+                // hitzone-wrap → hitzone-wrap 부모(main.stage) 기준
+                const stage = event.currentTarget.closest(".stage");
+                if (!stage) return;
+                const rect = stage.getBoundingClientRect();
                 const x = ((event.clientX - rect.left) / rect.width) * 100;
                 const y = ((event.clientY - rect.top) / rect.height) * 100;
                 setCrosshairPos({ x, y });
