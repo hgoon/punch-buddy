@@ -7,6 +7,8 @@ const SUPABASE_URL = "https://ydgnnikfmesvosghsdeg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZ25uaWtmbWVzdm9zZ2hzZGVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzI3NTcsImV4cCI6MjA5NzQwODc1N30.2fZgjUNFJVm3PrUsfqeO8Eu9UwyFoHYj9ao1Js6VFCg";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+const VERSION = "v1.8";
+
 const COMBO_LIMIT_MS = 500;
 const MAX_HP = 10000;
 
@@ -616,7 +618,7 @@ function App() {
     <div className="app" onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} onSelect={(e) => e.preventDefault()}>
       <header className="top">
         <div>
-          <h1>응원하기 👊</h1>
+          <h1>응원하기 👊 <span className="version-tag">{VERSION}</span></h1>
           <p>{nickname} <span className="online-badge">🟢 {onlineCount}명 접속 중</span></p>
         </div>
         <div className="top-buttons">
@@ -652,18 +654,12 @@ function App() {
         className={`stage ${impact} ${charging ? "charging" : ""}`}
         onContextMenu={(e) => e.preventDefault()}
         onPointerUp={(e) => {
-          if (!isKO && !isReviving) {
-            // 히트존에서 온 이벤트가 아니고, 실제 픽셀도 없으면 MISS
-            if (!hitZoneTriggered.current || !isPixelHit(e.clientX, e.clientY)) {
-              if (!hitZoneTriggered.current) {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                // 픽셀 판정 - 캐릭터 이미지 픽셀이 없는 곳이면 MISS
-                if (!isPixelHit(e.clientX, e.clientY)) {
-                  triggerMiss(x, y);
-                }
-              }
+          if (!isKO && !isReviving && !hitZoneTriggered.current) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            if (!isPixelHit(e.clientX, e.clientY)) {
+              triggerMiss(x, y);
             }
           }
           hitZoneTriggered.current = false;
