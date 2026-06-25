@@ -220,15 +220,12 @@ input {
 
 .hit-zone {
   position: absolute;
-  z-index: 5;
+  z-index: 20;
   background: transparent;
   border: 0;
   outline: none;
   touch-action: none;
 }
-
-/* 개발 중 히트박스를 보고 싶으면 아래 background 주석을 해제하면 됨 */
-/* .hit-zone { background: rgba(255, 0, 0, 0.12); } */
 
 .head-zone {
   left: 34%;
@@ -258,22 +255,90 @@ input {
   height: 18%;
 }
 
-.effect-text {
+.floating-effect {
   position: absolute;
-  z-index: 10;
-  left: 50%;
-  top: 38%;
+  z-index: 30;
   transform: translate(-50%, -50%);
-  color: #ff3d3d;
-  font-size: 44px;
-  font-weight: 1000;
-  letter-spacing: -1px;
-  text-shadow:
-    3px 3px 0 #000,
-    -2px -2px 0 #000,
-    0 0 24px rgba(255, 70, 70, 0.85);
-  animation: effectPop 0.42s ease-out forwards;
+  text-align: center;
   pointer-events: none;
+  animation: floatUp 0.85s ease-out forwards;
+}
+
+.hit-emoji {
+  font-size: 36px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.55));
+}
+
+.hit-label {
+  margin-top: -2px;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 1000;
+  text-shadow:
+    2px 2px 0 #000,
+    0 0 14px rgba(255, 255, 255, 0.5);
+}
+
+.hit-damage {
+  color: #ff3d3d;
+  font-size: 28px;
+  font-weight: 1000;
+  text-shadow:
+    2px 2px 0 #000,
+    0 0 16px rgba(255, 60, 60, 0.85);
+}
+
+.critical-effect .hit-label,
+.critical-effect .hit-damage {
+  color: #ffd335;
+}
+
+.ultra-effect .hit-emoji {
+  font-size: 52px;
+}
+
+.ultra-effect .hit-label {
+  color: #ff3838;
+  font-size: 30px;
+}
+
+.ultra-effect .hit-damage {
+  color: #ffd335;
+  font-size: 42px;
+}
+
+.damage-mark {
+  position: absolute;
+  z-index: 8;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,0.5));
+}
+
+.bruise {
+  left: 43%;
+  top: 48%;
+  font-size: 24px;
+}
+
+.nosebleed {
+  left: 49%;
+  top: 53%;
+  font-size: 24px;
+}
+
+.bandage {
+  left: 36%;
+  top: 42%;
+  font-size: 28px;
+  transform: rotate(-20deg);
+}
+
+.dizzy {
+  left: 52%;
+  top: 31%;
+  font-size: 36px;
+  animation: spinStar 1.1s linear infinite;
 }
 
 .charge-box {
@@ -380,22 +445,31 @@ input {
   100% { transform: translateX(0); }
 }
 
-@keyframes effectPop {
+@keyframes floatUp {
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.4) rotate(-8deg);
+    transform: translate(-50%, -40%) scale(0.45) rotate(-10deg);
   }
-  20% {
+  18% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1.2) rotate(3deg);
+    transform: translate(-50%, -70%) scale(1.18) rotate(4deg);
   }
-  80% {
+  70% {
     opacity: 1;
-    transform: translate(-50%, -80%) scale(1) rotate(-2deg);
+    transform: translate(-50%, -125%) scale(1) rotate(-2deg);
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -110%) scale(0.9) rotate(0deg);
+    transform: translate(-50%, -175%) scale(0.85) rotate(0deg);
+  }
+}
+
+@keyframes spinStar {
+  from {
+    transform: rotate(0deg) translateY(-6px);
+  }
+  to {
+    transform: rotate(360deg) translateY(-6px);
   }
 }
 
