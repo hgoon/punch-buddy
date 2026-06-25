@@ -4,6 +4,7 @@ import "./style.css";
 
 function App() {
   const pressStart = useRef(0);
+  const effectId = useRef(1);
 
   const [nickname, setNickname] = useState(
     localStorage.getItem("punch_nickname") || ""
@@ -23,7 +24,7 @@ function App() {
   const [log, setLog] = useState([]);
   const [reaction, setReaction] = useState("");
   const [chargePercent, setChargePercent] = useState(0);
-  const [effect, setEffect] = useState("");
+  const [floatingEffects, setFloatingEffects] = useState([]);
   const [condition, setCondition] = useState({
     bruise: false,
     nosebleed: false,
@@ -32,30 +33,10 @@ function App() {
   });
 
   const zones = {
-    head: {
-      name: "머리",
-      min: 8,
-      max: 16,
-      reaction: "hit-head",
-    },
-    face: {
-      name: "얼굴",
-      min: 10,
-      max: 20,
-      reaction: "hit-face",
-    },
-    body: {
-      name: "몸통",
-      min: 7,
-      max: 15,
-      reaction: "hit-body",
-    },
-    leg: {
-      name: "다리",
-      min: 5,
-      max: 12,
-      reaction: "hit-leg",
-    },
+    head: { name: "머리", min: 8, max: 16, reaction: "hit-head" },
+    face: { name: "얼굴", min: 10, max: 22, reaction: "hit-face" },
+    body: { name: "몸통", min: 7, max: 16, reaction: "hit-body" },
+    leg: { name: "다리", min: 5, max: 13, reaction: "hit-leg" },
   };
 
   function startGame() {
@@ -72,8 +53,6 @@ function App() {
   }
 
   function resetGame() {
-    localStorage.removeItem("punch_stats");
-
     const resetStats = {
       hits: 0,
       totalDamage: 0,
@@ -81,10 +60,12 @@ function App() {
       combo: 0,
     };
 
+    localStorage.setItem("punch_stats", JSON.stringify(resetStats));
     setStats(resetStats);
     setLog([]);
     setReaction("");
-    setEffect("");
+    setChargePercent(0);
+    setFloatingEffects([]);
     setCondition({
       bruise: false,
       nosebleed: false,
@@ -95,24 +76,28 @@ function App() {
 
   function startCharge() {
     pressStart.current = Date.now();
-    setChargePercent(20);
+    setChargePercent(100);
   }
 
-  function endCharge(zoneKey) {
+  function endCharge(zoneKey, event) {
     const zone = zones[zoneKey];
     if (!zone) return;
+
+    const rect = event.currentTarget.parentElement.getBoundingClientRect();
+    const touchX = event.clientX - rect.left;
+    const touchY = event.clientY - rect.top;
 
     const holdTime = Math.min(Date.now() - pressStart.current, 2000);
     const chargeMultiplier = 1 + holdTime / 900;
 
     const baseDamage = random(zone.min, zone.max);
-    const isCritical = Math.random() < 0.12;
-    const isSuperCritical = holdTime > 1300 && Math.random() < 0.18;
+    const isCritical = Math.random() < 0.14;
+    const isUltra = holdTime > 1300 && Math.random() < 0.22;
 
     let damage = Math.floor(baseDamage * chargeMultiplier);
 
     if (isCritical) damage *= 3;
-    if (isSuperCritical) damage *= 5;
+    if (isUltra) damage *= 5;
 
     const nextStats = {
       hits: stats.hits + 1,
@@ -126,28 +111,59 @@ function App() {
 
     updateCondition(nextStats.hits, damage, zoneKey);
 
-    const nextReaction = isSuperCritical
+    const nextReaction = isUltra
       ? "super-critical"
       : isCritical
       ? "critical"
       : zone.reaction;
 
     setReaction(nextReaction);
-    setEffect(isSuperCritical ? "ULTRA!" : isCritical ? "CRITICAL!" : "HIT!");
+    setChargePercent(0);
 
-    const message = isSuperCritical
+    addFloatingEffect({
+      x: touchX,
+      y: touchY,
+      damage,
+      zoneName: zone.name,
+      critical: isCritical,
+      ultra: isUltra,
+    });
+
+    vibrate(isUltra, isCritical);
+
+    const message = isUltra
       ? `🔥 ${zone.name} 울트라 크리티컬! ${damage} 데미지`
       : isCritical
       ? `💥 ${zone.name} 크리티컬! ${damage} 데미지`
       : `👊 ${zone.name} 타격! ${damage} 데미지`;
 
     setLog((prev) => [message, ...prev].slice(0, 7));
-    setChargePercent(0);
 
     setTimeout(() => {
       setReaction("");
-      setEffect("");
-    }, 420);
+    }, isUltra ? 650 : 430);
+  }
+
+  function addFloatingEffect({ x, y, damage, zoneName, critical, ultra }) {
+    const id = effectId.current++;
+
+    const next = {
+      id,
+      x,
+      y,
+      damage,
+      zoneName,
+      critical,
+      ultra,
+      label: ultra ? "ULTRA!" : critical ? "CRITICAL!" : "HIT!",
+      emoji: ultra ? "💥" : critical ? "💢" : "👊",
+    };
+
+    setFloatingEffects((prev) => [...prev, next]);
+
+    setTimeout(() => {
+      setFloatingEffects((prev) => prev.filter((item) => item.id !== id));
+    }, 850);
   }
 
   function updateCondition(hits, damage, zoneKey) {
@@ -155,12 +171,28 @@ function App() {
       const next = { ...prev };
 
       if (hits >= 5 || zoneKey === "face") next.bruise = true;
-      if (hits >= 8 || (zoneKey === "face" && damage >= 35)) next.nosebleed = true;
-      if (hits >= 14 || damage >= 60) next.bandage = true;
-      if (damage >= 80) next.dizzy = true;
+      if (hits >= 9 || (zoneKey === "face" && damage >= 35)) next.nosebleed = true;
+      if (hits >= 16 || damage >= 65) next.bandage = true;
+      if (damage >= 90 || hits >= 28) next.dizzy = true;
 
       return next;
     });
+  }
+
+  function vibrate(isUltra, isCritical) {
+    if (!navigator.vibrate) return;
+
+    if (isUltra) {
+      navigator.vibrate([40, 40, 80]);
+      return;
+    }
+
+    if (isCritical) {
+      navigator.vibrate([30, 30, 40]);
+      return;
+    }
+
+    navigator.vibrate(18);
   }
 
   function random(min, max) {
@@ -222,22 +254,34 @@ function App() {
       <main className={`stage ${reaction.includes("critical") ? "shake" : ""}`}>
         <img
           className={`character ${reaction}`}
-          src="./coach_red.png"
+          src="/coach_red.png"
           alt="character"
         />
 
-        {condition.bruise && <div className="mark bruise">🟣</div>}
-        {condition.nosebleed && <div className="mark nosebleed">🩸</div>}
-        {condition.bandage && <div className="mark bandage">🩹</div>}
-        {condition.dizzy && <div className="mark dizzy">💫</div>}
+        {condition.bruise && <div className="damage-mark bruise">🟣</div>}
+        {condition.nosebleed && <div className="damage-mark nosebleed">🩸</div>}
+        {condition.bandage && <div className="damage-mark bandage">🩹</div>}
+        {condition.dizzy && <div className="damage-mark dizzy">💫</div>}
 
-        {effect && <div className="effect-text">{effect}</div>}
+        {floatingEffects.map((item) => (
+          <div
+            key={item.id}
+            className={`floating-effect ${
+              item.ultra ? "ultra-effect" : item.critical ? "critical-effect" : ""
+            }`}
+            style={{ left: item.x, top: item.y }}
+          >
+            <div className="hit-emoji">{item.emoji}</div>
+            <div className="hit-label">{item.label}</div>
+            <div className="hit-damage">-{item.damage}</div>
+          </div>
+        ))}
 
         <button
           aria-label="head hit zone"
           className="hit-zone head-zone"
           onPointerDown={startCharge}
-          onPointerUp={() => endCharge("head")}
+          onPointerUp={(event) => endCharge("head", event)}
           onPointerCancel={() => setChargePercent(0)}
         />
 
@@ -245,7 +289,7 @@ function App() {
           aria-label="face hit zone"
           className="hit-zone face-zone"
           onPointerDown={startCharge}
-          onPointerUp={() => endCharge("face")}
+          onPointerUp={(event) => endCharge("face", event)}
           onPointerCancel={() => setChargePercent(0)}
         />
 
@@ -253,7 +297,7 @@ function App() {
           aria-label="body hit zone"
           className="hit-zone body-zone"
           onPointerDown={startCharge}
-          onPointerUp={() => endCharge("body")}
+          onPointerUp={(event) => endCharge("body", event)}
           onPointerCancel={() => setChargePercent(0)}
         />
 
@@ -261,7 +305,7 @@ function App() {
           aria-label="leg hit zone"
           className="hit-zone leg-zone"
           onPointerDown={startCharge}
-          onPointerUp={() => endCharge("leg")}
+          onPointerUp={(event) => endCharge("leg", event)}
           onPointerCancel={() => setChargePercent(0)}
         />
       </main>
