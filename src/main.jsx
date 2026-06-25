@@ -104,6 +104,8 @@ function App() {
   const [charging,       setCharging]       = useState(false);
   const [chargeLevelLive,setChargeLevelLive]= useState(0);
   const [crosshairPos,   setCrosshairPos]   = useState({ x: 50, y: 50 }); // % 기준
+  const [dodgeOffset,    setDodgeOffset]    = useState(0); // 캐릭터 좌우 이동 px
+  const dodgeRafRef = useRef(null);
   const [floatingEffects,setFloatingEffects]= useState([]);
   const [speech,         setSpeech]         = useState("");
   const [isReviveSpeech, setIsReviveSpeech] = useState(false);
@@ -144,7 +146,42 @@ function App() {
     };
   }, [nickname, syncToSupabase]);
 
-  // ── Realtime Presence: 접속자 수 ───────────────
+  // ── HP 낮을 때 캐릭터 회피 이동 ────────────────
+  useEffect(() => {
+    const ratio = hp / MAX_HP;
+
+    // 25% 이하이고 KO/재선임 중 아닐 때만 작동
+    if (ratio > 0.25 || isKO || isReviving || hp === 0) {
+      if (dodgeRafRef.current) {
+        cancelAnimationFrame(dodgeRafRef.current);
+        dodgeRafRef.current = null;
+      }
+      setDodgeOffset(0);
+      return;
+    }
+
+    // HP 낮을수록 빠르게: 25%→속도1, 10%→속도3, 0%→속도5
+    const speed = 1 + (1 - ratio / 0.25) * 4;
+    const range = 28; // 최대 이동 범위 px
+    let startTime = null;
+
+    function tick(timestamp) {
+      if (!startTime) startTime = timestamp;
+      const elapsed = (timestamp - startTime) / 1000;
+      const offset = Math.sin(elapsed * speed * Math.PI) * range;
+      setDodgeOffset(offset);
+      dodgeRafRef.current = requestAnimationFrame(tick);
+    }
+
+    dodgeRafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (dodgeRafRef.current) {
+        cancelAnimationFrame(dodgeRafRef.current);
+        dodgeRafRef.current = null;
+      }
+    };
+  }, [hp, isKO, isReviving]);
   useEffect(() => {
     if (!started || !nickname) return;
 
@@ -584,7 +621,10 @@ function App() {
           </div>
         )}
 
-        <div className="target-wrap">
+        <div
+          className="target-wrap"
+          style={{ transform: `translateX(calc(-50% + ${dodgeOffset}px))` }}
+        >
           {speech && <div className={`speech-bubble${isReviveSpeech ? " revive" : ""}`}>{speech}</div>}
           <img
             className={`character ${reaction}`}
@@ -619,21 +659,26 @@ function App() {
           </div>
         )}
 
-        {Object.entries(ZONES).map(([key, zone]) => (
-          <button key={key} aria-label={`${zone.name} hit zone`} className={`hit-zone ${zone.hitbox}`}
-            onPointerDown={startCharge}
-            onPointerUp={(event) => endCharge(key, event)}
-            onPointerCancel={cancelCharge}
-            onPointerLeave={cancelCharge}
-            onPointerMove={(event) => {
-              if (!charging) return;
-              const rect = event.currentTarget.parentElement.getBoundingClientRect();
-              const x = ((event.clientX - rect.left) / rect.width) * 100;
-              const y = ((event.clientY - rect.top) / rect.height) * 100;
-              setCrosshairPos({ x, y });
-            }}
-          />
-        ))}
+        <div
+          className="hitzone-wrap"
+          style={{ transform: `translateX(${dodgeOffset}px)` }}
+        >
+          {Object.entries(ZONES).map(([key, zone]) => (
+            <button key={key} aria-label={`${zone.name} hit zone`} className={`hit-zone ${zone.hitbox}`}
+              onPointerDown={startCharge}
+              onPointerUp={(event) => endCharge(key, event)}
+              onPointerCancel={cancelCharge}
+              onPointerLeave={cancelCharge}
+              onPointerMove={(event) => {
+                if (!charging) return;
+                const rect = event.currentTarget.parentElement.parentElement.getBoundingClientRect();
+                const x = ((event.clientX - rect.left) / rect.width) * 100;
+                const y = ((event.clientY - rect.top) / rect.height) * 100;
+                setCrosshairPos({ x, y });
+              }}
+            />
+          ))}
+        </div>
       </main>
 
       <section className="charge-box">
