@@ -72,6 +72,7 @@ function App() {
   const lastHitAt     = useRef(0);
   const comboResetTimer = useRef(null);
   const chargeRafRef  = useRef(null);
+  const presenceRef   = useRef(null); // Supabase Realtime Presence 채널
 
   // 세션 중 누적된 델타 (Supabase에 아직 안 보낸 것)
   const sessionDelta  = useRef({ hits: 0, totalDamage: 0, koCount: 0, bestKoTime: 0 });
@@ -112,6 +113,7 @@ function App() {
   const [ranking,      setRanking]     = useState([]);
   const [rankLoading,  setRankLoading] = useState(false);
   const [showRanking,  setShowRanking] = useState(false);
+  const [onlineCount,  setOnlineCount] = useState(1);
 
   // ── Supabase 동기화 ─────────────────────────────
   const syncToSupabase = useCallback(async (nick, delta) => {
@@ -141,7 +143,32 @@ function App() {
     };
   }, [nickname, syncToSupabase]);
 
-  // ── 랭킹 불러오기 ──────────────────────────────
+  // ── Realtime Presence: 접속자 수 ───────────────
+  useEffect(() => {
+    if (!started || !nickname) return;
+
+    const channel = supabase.channel("cheer_online", {
+      config: { presence: { key: nickname } },
+    });
+
+    channel
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState();
+        setOnlineCount(Object.keys(state).length);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({ nickname, online_at: new Date().toISOString() });
+        }
+      });
+
+    presenceRef.current = channel;
+
+    return () => {
+      channel.untrack();
+      supabase.removeChannel(channel);
+    };
+  }, [started, nickname]);
   async function fetchRanking(tab) {
     setRankLoading(true);
     try {
@@ -499,11 +526,10 @@ function App() {
       <header className="top">
         <div>
           <h1>응원하기 👊</h1>
-          <p>{nickname}</p>
+          <p>{nickname} <span className="online-badge">🟢 {onlineCount}명 접속 중</span></p>
         </div>
         <div className="top-buttons">
           <button className="small-button rank-button" onClick={openRanking}>🏆 랭킹</button>
-          <button className="small-button" onClick={resetGame}>리셋</button>
         </div>
       </header>
 
