@@ -521,6 +521,8 @@ function App() {
     setMissEffects((prev) => [...prev, { id, x, y }]);
     setTimeout(() => setMissEffects((prev) => prev.filter((i) => i.id !== id)), 700);
   }
+
+  function showSpeech(zone, isCritical, isUltra) {
     const lines = isUltra
       ? ["으아아악!!", "잠깐만!!", "너무 강해!!", "내 안에 뭔가가 움직였다"]
       : isCritical
