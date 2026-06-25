@@ -7,7 +7,7 @@ const SUPABASE_URL = "https://ydgnnikfmesvosghsdeg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZ25uaWtmbWVzdm9zZ2hzZGVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzI3NTcsImV4cCI6MjA5NzQwODc1N30.2fZgjUNFJVm3PrUsfqeO8Eu9UwyFoHYj9ao1Js6VFCg";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const VERSION = "v3.9";
+const VERSION = "v4.0";
 
 const COMBO_LIMIT_MS = 500;
 const MAX_HP = 10000;
@@ -745,7 +745,132 @@ function App() {
 
   function random(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
-  // ── 랭킹 탭 값 ──────────────────────────────────
+  // ── 기록 카드 공유 ──────────────────────────────
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  async function shareCard() {
+    const canvas = document.createElement("canvas");
+    const W = 640, H = 820;
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d");
+
+    // 배경
+    ctx.fillStyle = "#0f0f14";
+    ctx.fillRect(0, 0, W, H);
+
+    // 상단 그라디언트
+    const grad = ctx.createLinearGradient(0, 0, 0, 200);
+    grad.addColorStop(0, "rgba(255,211,53,0.15)");
+    grad.addColorStop(1, "transparent");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, 200);
+
+    // 캐릭터 이미지
+    const img = characterImgRef.current;
+    if (img) {
+      const imgH = 280;
+      const imgW = img.naturalWidth * (imgH / img.naturalHeight);
+      ctx.drawImage(img, (W - imgW) / 2, 30, imgW, imgH);
+    }
+
+    // 타이틀
+    ctx.fillStyle = "#ffd335";
+    ctx.font = "bold 38px system-ui, -apple-system, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("응원하기 👊", W / 2, 360);
+
+    // 닉네임
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 22px system-ui, -apple-system, sans-serif";
+    ctx.fillText(`${nickname}의 응원 기록`, W / 2, 400);
+
+    // 구분선
+    ctx.strokeStyle = "rgba(255,255,255,0.1)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(60, 425);
+    ctx.lineTo(W - 60, 425);
+    ctx.stroke();
+
+    // 스탯 4개
+    const statsList = [
+      { icon: "👊", label: "응원",      value: `${stats.hits.toLocaleString()}회` },
+      { icon: "🔥", label: "총 포인트", value: `${stats.totalDamage.toLocaleString()}pt` },
+      { icon: "💀", label: "KO",        value: `${koCount}회` },
+      { icon: "⚡", label: "최고 콤보", value: `${stats.bestCombo}콤보` },
+    ];
+
+    statsList.forEach((s, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const x = 60 + col * 270;
+      const y = 450 + row * 120;
+
+      ctx.fillStyle = "#202027";
+      roundRect(ctx, x, y, 240, 95, 16);
+      ctx.fill();
+
+      ctx.font = "26px system-ui";
+      ctx.textAlign = "left";
+      ctx.fillText(s.icon, x + 14, y + 38);
+
+      ctx.fillStyle = "#aaaaaa";
+      ctx.font = "13px system-ui, -apple-system, sans-serif";
+      ctx.fillText(s.label, x + 14, y + 60);
+
+      ctx.fillStyle = "#ffd335";
+      ctx.font = "bold 22px system-ui, -apple-system, sans-serif";
+      ctx.fillText(s.value, x + 14, y + 85);
+    });
+
+    // 구분선
+    ctx.strokeStyle = "rgba(255,255,255,0.1)";
+    ctx.beginPath();
+    ctx.moveTo(60, 710);
+    ctx.lineTo(W - 60, 710);
+    ctx.stroke();
+
+    // URL + 문구
+    ctx.fillStyle = "#666";
+    ctx.font = "14px system-ui, -apple-system, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("punch-buddy.vercel.app", W / 2, 748);
+    ctx.fillStyle = "#444";
+    ctx.font = "12px system-ui, -apple-system, sans-serif";
+    ctx.fillText("같이 응원해봐! 👊", W / 2, 778);
+
+    // 공유 or 다운로드
+    canvas.toBlob(async (blob) => {
+      const file = new File([blob], "cheer-card.png", { type: "image/png" });
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: "응원하기 👊",
+          text: `${nickname}의 응원 기록을 확인해봐!`,
+          files: [file],
+        });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${nickname}-cheer-card.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    }, "image/png");
+  }
   function getRankValue(row, tabKey) {
     const map = {
       hits:         row.hits,
@@ -894,6 +1019,7 @@ function App() {
           <p>{nickname} <span className="online-badge">🟢 {onlineCount}명 접속 중</span></p>
         </div>
         <div className="top-buttons">
+          <button className="small-button share-button" onClick={shareCard}>📤 공유</button>
           <button className="small-button rank-button" onClick={openRanking}>🏆 랭킹</button>
         </div>
       </header>
