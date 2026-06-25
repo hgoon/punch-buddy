@@ -1078,6 +1078,14 @@ input {
   animation: koBounce 0.35s cubic-bezier(0.22, 1.5, 0.5, 1) forwards;
 }
 
+.ko-bonus {
+  font-size: 16px;
+  font-weight: 900;
+  color: #65ff38;
+  text-shadow: 0 0 16px rgba(101, 255, 56, 0.8), 0 2px 4px rgba(0,0,0,0.6);
+  animation: koBounce 0.35s cubic-bezier(0.22, 1.5, 0.5, 1) forwards;
+}
+
 .ko-killer {
   font-size: 18px;
   font-weight: 800;
