@@ -7,7 +7,7 @@ const SUPABASE_URL = "https://ydgnnikfmesvosghsdeg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZ25uaWtmbWVzdm9zZ2hzZGVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzI3NTcsImV4cCI6MjA5NzQwODc1N30.2fZgjUNFJVm3PrUsfqeO8Eu9UwyFoHYj9ao1Js6VFCg";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const VERSION = "v2.5";
+const VERSION = "v2.6";
 
 const COMBO_LIMIT_MS = 500;
 const MAX_HP = 10000;
@@ -693,10 +693,39 @@ function App() {
           const x = e.clientX - rect.left;
           const y = e.clientY - rect.top;
 
-          if (!isKO && !isReviving && !hitZoneTriggered.current) {
-            // 히트존 밖 터치 → 픽셀 판정 후 MISS
-            if (!isPixelHit(e.clientX, e.clientY)) {
-              triggerMiss(x, y);
+          if (!isKO && !isReviving) {
+            if (chargeLevelLive >= 2) {
+              // lv2+ 차지: 손 뗀 위치 기준으로 히트존 직접 찾기
+              let foundZone = null;
+              for (const [key, zone] of Object.entries(ZONES)) {
+                const el = document.querySelector(`.${zone.hitbox}`);
+                if (!el) continue;
+                const r = el.getBoundingClientRect();
+                if (e.clientX >= r.left && e.clientX <= r.right &&
+                    e.clientY >= r.top  && e.clientY <= r.bottom) {
+                  foundZone = key;
+                  break;
+                }
+              }
+
+              if (foundZone && isPixelHit(e.clientX, e.clientY)) {
+                hitZoneTriggered.current = true;
+                endCharge(foundZone, e);
+                cancelCharge();
+                return;
+              }
+              // 히트존 밖이거나 픽셀 투명 → MISS
+              if (!isPixelHit(e.clientX, e.clientY)) {
+                triggerMiss(x, y);
+              }
+              cancelCharge();
+              return;
+            }
+
+            if (!hitZoneTriggered.current) {
+              if (!isPixelHit(e.clientX, e.clientY)) {
+                triggerMiss(x, y);
+              }
             }
           }
           hitZoneTriggered.current = false;
@@ -791,7 +820,10 @@ function App() {
           {Object.entries(ZONES).map(([key, zone]) => (
             <button key={key} aria-label={`${zone.name} hit zone`} className={`hit-zone ${zone.hitbox}`}
               onPointerDown={startCharge}
-              onPointerUp={(event) => endCharge(key, event)}
+              onPointerUp={(event) => {
+                if (chargeLevelLive >= 2) return; // lv2+는 stage에서 처리
+                endCharge(key, event);
+              }}
               onPointerCancel={cancelCharge}
             />
           ))}
