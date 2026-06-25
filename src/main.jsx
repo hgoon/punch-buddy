@@ -8,7 +8,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const COMBO_LIMIT_MS = 500;
-const MAX_HP = 3000;
+const MAX_HP = 10000;
 
 // 세션 스탯 누적 후 N타마다 Supabase 동기화
 const SYNC_INTERVAL = 10;
@@ -63,7 +63,7 @@ const RANK_TABS = [
   { key: "hits",         label: "응원왕", icon: "👊", unit: "회" },
   { key: "total_damage", label: "화력왕", icon: "🔥", unit: "pt" },
   { key: "ko_count",     label: "KO왕",  icon: "💀", unit: "KO" },
-  { key: "best_ko_time", label: "속도왕", icon: "⚡", unit: "" },
+  { key: "best_combo",   label: "콤보왕", icon: "🔥", unit: "콤보" },
 ];
 
 function App() {
@@ -75,7 +75,7 @@ function App() {
   const presenceRef   = useRef(null); // Supabase Realtime Presence 채널
 
   // 세션 중 누적된 델타 (Supabase에 아직 안 보낸 것)
-  const sessionDelta  = useRef({ hits: 0, totalDamage: 0, koCount: 0, bestKoTime: 0 });
+  const sessionDelta  = useRef({ hits: 0, totalDamage: 0, koCount: 0, bestCombo: 0 });
   const syncTimer     = useRef(null);
   const koStartAt     = useRef(0); // 현재 라운드 첫 타격 시각
   const timerRafRef   = useRef(null); // 타이머 RAF
@@ -86,7 +86,7 @@ function App() {
 
   const [stats, setStats] = useState(() =>
     JSON.parse(localStorage.getItem("punch_stats") ||
-      '{"hits":0,"totalDamage":0,"bestKoTime":0,"combo":0,"koCount":0}')
+      '{"hits":0,"totalDamage":0,"bestCombo":0,"combo":0,"koCount":0}')
   );
 
   const [hp,          setHp]          = useState(MAX_HP);
@@ -117,16 +117,16 @@ function App() {
 
   // ── Supabase 동기화 ─────────────────────────────
   const syncToSupabase = useCallback(async (nick, delta) => {
-    if (!nick || (delta.hits === 0 && delta.totalDamage === 0 && delta.koCount === 0 && delta.bestKoTime === 0)) return;
+    if (!nick || (delta.hits === 0 && delta.totalDamage === 0 && delta.koCount === 0 && delta.bestCombo === 0)) return;
     try {
       await supabase.rpc("upsert_cheer_stats", {
         p_nickname:     nick,
         p_hits:         delta.hits,
         p_total_damage: delta.totalDamage,
         p_ko_count:     delta.koCount,
-        p_best_ko_time: delta.bestKoTime,
+        p_best_combo:   delta.bestCombo,
       });
-      sessionDelta.current = { hits: 0, totalDamage: 0, koCount: 0, bestKoTime: 0 };
+      sessionDelta.current = { hits: 0, totalDamage: 0, koCount: 0, bestCombo: 0 };
     } catch (e) {
       console.warn("sync error", e);
     }
@@ -172,15 +172,12 @@ function App() {
   async function fetchRanking(tab) {
     setRankLoading(true);
     try {
-      const isSpeed = tab === "best_ko_time";
       const { data, error } = await supabase
         .from("cheer_ranking")
-        .select("nickname, hits, total_damage, ko_count, best_ko_time")
-        .order(tab, { ascending: isSpeed, nullsFirst: false })
+        .select("nickname, hits, total_damage, ko_count, best_combo")
+        .order(tab, { ascending: false, nullsFirst: false })
         .limit(20);
-      // 속도왕: best_ko_time = 0(기록 없음) 제외
-      const filtered = isSpeed ? (data || []).filter((r) => r.best_ko_time > 0) : (data || []);
-      if (!error) setRanking(filtered);
+      if (!error) setRanking(data || []);
     } catch (e) {
       console.warn("ranking error", e);
     }
@@ -214,7 +211,7 @@ function App() {
     // 남은 델타 먼저 동기화
     syncToSupabase(nickname, sessionDelta.current);
 
-    const resetStats = { hits: 0, totalDamage: 0, bestKoTime: 0, combo: 0, koCount: 0 };
+    const resetStats = { hits: 0, totalDamage: 0, bestCombo: 0, combo: 0, koCount: 0 };
     localStorage.setItem("punch_stats", JSON.stringify(resetStats));
     setStats(resetStats);
     setKoCount(0);
@@ -232,7 +229,7 @@ function App() {
       cancelAnimationFrame(timerRafRef.current);
       timerRafRef.current = null;
     }
-    sessionDelta.current = { hits: 0, totalDamage: 0, koCount: 0, bestKoTime: 0 };
+    sessionDelta.current = { hits: 0, totalDamage: 0, koCount: 0, bestCombo: 0 };
     if (comboResetTimer.current) { clearTimeout(comboResetTimer.current); comboResetTimer.current = null; }
   }
 
@@ -312,10 +309,12 @@ function App() {
       timerRafRef.current = requestAnimationFrame(tickTimer);
     }
 
+    const newBestCombo = Math.max(stats.bestCombo || 0, nextCombo);
+
     const nextStats = {
       hits:        stats.hits + 1,
       totalDamage: stats.totalDamage + damage,
-      bestKoTime:  stats.bestKoTime || 0,
+      bestCombo:   newBestCombo,
       combo:       nextCombo,
       koCount:     stats.koCount || 0,
     };
@@ -326,6 +325,7 @@ function App() {
     const d = sessionDelta.current;
     d.hits        += 1;
     d.totalDamage += damage;
+    d.bestCombo    = Math.max(d.bestCombo, nextCombo);
 
     // SYNC_INTERVAL 타마다 자동 동기화
     if (nextStats.hits % SYNC_INTERVAL === 0) {
@@ -376,27 +376,17 @@ function App() {
       timerRafRef.current = null;
     }
 
-    // KO 소요시간 계산 (첫 타격 ~ KO 시점)
-    const koTime   = koStartAt.current > 0 ? Date.now() - koStartAt.current : 0;
-    const prevBest = latestStats.bestKoTime || 0;
-    const newBest  = koTime > 0
-      ? (prevBest === 0 ? koTime : Math.min(prevBest, koTime))
-      : prevBest;
-
     const nextKoCount = (latestStats.koCount || 0) + 1;
-    const nextStats   = { ...latestStats, koCount: nextKoCount, bestKoTime: newBest };
+    const nextStats   = { ...latestStats, koCount: nextKoCount };
     setStats(nextStats);
     setKoCount(nextKoCount);
     localStorage.setItem("punch_stats", JSON.stringify(nextStats));
 
-    // bestKoTime은 KO 시점 기록이므로 별도 즉시 동기화
-    // (hits/totalDamage 델타는 유지, koCount/bestKoTime만 덮어씀)
+    // KO 시 즉시 동기화
     const d = sessionDelta.current;
-    d.koCount   += 1;
-    d.bestKoTime = newBest;
+    d.koCount += 1;
     syncToSupabase(nickname, { ...d });
-    // 동기화 후 델타 초기화
-    sessionDelta.current = { hits: 0, totalDamage: 0, koCount: 0, bestKoTime: 0 };
+    sessionDelta.current = { hits: 0, totalDamage: 0, koCount: 0, bestCombo: 0 };
 
     // 다음 라운드를 위해 초기화
     koStartAt.current = 0;
@@ -561,6 +551,11 @@ function App() {
       >
         {flash && <div className={`screen-flash ${flash}`} />}
         {charging && <div className={`charge-power charge-power-${chargeLevelLive}`}>POWER</div>}
+
+        {/* 조준경 */}
+        <div className={`crosshair ${charging ? `lv${chargeLevelLive}` : ""}`}>
+          <div className="crosshair-center" />
+        </div>
 
         {/* 라운드 타이머 */}
         {koStartAt.current > 0 && !isKO && !isReviving && (
