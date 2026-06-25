@@ -7,7 +7,7 @@ const SUPABASE_URL = "https://ydgnnikfmesvosghsdeg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZ25uaWtmbWVzdm9zZ2hzZGVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzI3NTcsImV4cCI6MjA5NzQwODc1N30.2fZgjUNFJVm3PrUsfqeO8Eu9UwyFoHYj9ao1Js6VFCg";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const VERSION = "v2.7";
+const VERSION = "v2.8";
 
 const COMBO_LIMIT_MS = 500;
 const MAX_HP = 10000;
@@ -94,6 +94,9 @@ function App() {
   const [hp,          setHp]          = useState(MAX_HP);
   const [isKO,        setIsKO]        = useState(false);
   const [isReviving,  setIsReviving]  = useState(false);
+  const [lastKoBy,    setLastKoBy]    = useState(""); // 마지막 KO 유저
+  const sharedHpRef   = useRef(MAX_HP); // 공용 HP ref (Realtime 콜백에서 사용)
+  const koLockRef     = useRef(false);  // KO 중복 방지
   const [koCount,     setKoCount]     = useState(
     () => JSON.parse(localStorage.getItem("punch_stats") || "{}").koCount || 0
   );
@@ -188,6 +191,67 @@ function App() {
       }
     };
   }, [hp, isKO, isReviving]);
+
+  // ── 공용 HP 초기 로드 + Realtime 구독 ──────────
+  useEffect(() => {
+    if (!started) return;
+
+    // 초기 HP 로드
+    supabase.from("cheer_shared").select("hp, last_ko_by").eq("id", 1).single()
+      .then(({ data }) => {
+        if (data) {
+          setHp(data.hp);
+          sharedHpRef.current = data.hp;
+        }
+      });
+
+    // Realtime 구독
+    const channel = supabase
+      .channel("cheer_shared_hp")
+      .on("postgres_changes", {
+        event: "UPDATE",
+        schema: "public",
+        table: "cheer_shared",
+      }, (payload) => {
+        const newHp = payload.new.hp;
+        const koBy  = payload.new.last_ko_by;
+        sharedHpRef.current = newHp;
+        setHp(newHp);
+        if (newHp === 0 && !koLockRef.current) {
+          koLockRef.current = true;
+          setLastKoBy(koBy || "");
+          handleSharedKO(koBy);
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [started]);
+
+  // ── 다른 유저가 KO시켰을 때 처리 ────────────────
+  function handleSharedKO(koBy) {
+    setIsKO(true);
+    setCharacterPose("ko");
+    cancelCharge();
+    if (timerRafRef.current) {
+      cancelAnimationFrame(timerRafRef.current);
+      timerRafRef.current = null;
+    }
+    koStartAt.current = 0;
+    setRoundTimer(0);
+    vibrate(true, false);
+
+    setTimeout(() => { setIsKO(false); setIsReviving(true); setCharacterPose("normal"); }, 3000);
+    setTimeout(async () => {
+      setIsReviving(false);
+      koLockRef.current = false;
+      await supabase.rpc("reset_shared_hp");
+      setSpeech("내 안에 뭔가가 나를 움직여 다시 왔습니다.");
+      setIsReviveSpeech(true);
+      setTimeout(() => { setSpeech(""); setIsReviveSpeech(false); }, 2000);
+    }, 5000);
+  }
+
   useEffect(() => {
     if (!started || !nickname) return;
 
@@ -393,10 +457,16 @@ function App() {
       syncToSupabase(nickname, { ...d });
     }
 
-    setHp((prevHp) => {
-      const nextHp = Math.max(0, prevHp - damage);
-      if (nextHp === 0 && !isKO) triggerKO(nextStats);
-      return nextHp;
+    // 공용 HP 감소 (Supabase RPC)
+    supabase.rpc("damage_shared_hp", {
+      p_damage:   damage,
+      p_nickname: nickname,
+    }).then(({ data }) => {
+      if (data && data.is_ko && !koLockRef.current) {
+        koLockRef.current = true;
+        setLastKoBy(nickname);
+        triggerKO(nextStats);
+      }
     });
 
     const nextReaction = isUltra ? "super-critical" : isCritical ? "critical" : zone.reaction;
@@ -425,13 +495,12 @@ function App() {
     }, isUltra ? 720 : 480);
   }
 
-  // ── KO ──────────────────────────────────────────
+  // ── KO (내가 마지막 타격) ────────────────────────
   function triggerKO(latestStats) {
     setIsKO(true);
     setCharacterPose("ko");
     cancelCharge();
 
-    // 타이머 정지
     if (timerRafRef.current) {
       cancelAnimationFrame(timerRafRef.current);
       timerRafRef.current = null;
@@ -443,22 +512,20 @@ function App() {
     setKoCount(nextKoCount);
     localStorage.setItem("punch_stats", JSON.stringify(nextStats));
 
-    // KO 시 즉시 동기화
     const d = sessionDelta.current;
     d.koCount += 1;
     syncToSupabase(nickname, { ...d });
     sessionDelta.current = { hits: 0, totalDamage: 0, koCount: 0, bestCombo: 0 };
 
-    // 다음 라운드를 위해 초기화
     koStartAt.current = 0;
     setRoundTimer(0);
-
     vibrate(true, false);
 
     setTimeout(() => { setIsKO(false); setIsReviving(true); setCharacterPose("normal"); }, 3000);
-    setTimeout(() => {
+    setTimeout(async () => {
       setIsReviving(false);
-      setHp(MAX_HP);
+      koLockRef.current = false;
+      await supabase.rpc("reset_shared_hp");
       setSpeech("내 안에 뭔가가 나를 움직여 다시 왔습니다.");
       setIsReviveSpeech(true);
       setTimeout(() => { setSpeech(""); setIsReviveSpeech(false); }, 2000);
@@ -808,8 +875,22 @@ function App() {
 
         {(isKO || isReviving) && (
           <div className={`ko-overlay ${isReviving ? "reviving" : "ko-active"}`}>
-            {isKO ? (<><div className="ko-text">K.O!!</div><div className="ko-sub">재선임 중…</div></>)
-                  : (<><div className="ko-revive-text">재선임 완료!</div><div className="ko-sub">새 감독 등장 🔴</div></>)}
+            {isKO ? (
+              <>
+                <div className="ko-text">K.O!!</div>
+                {lastKoBy && (
+                  <div className="ko-killer">
+                    {lastKoBy === nickname ? "⚡ 내가 KO시켰다!" : `💀 ${lastKoBy} 의 KO!`}
+                  </div>
+                )}
+                <div className="ko-sub">재선임 중…</div>
+              </>
+            ) : (
+              <>
+                <div className="ko-revive-text">재선임 완료!</div>
+                <div className="ko-sub">새 감독 등장 🔴</div>
+              </>
+            )}
           </div>
         )}
 
