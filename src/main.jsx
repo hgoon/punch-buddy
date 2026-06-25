@@ -298,13 +298,15 @@ function App() {
     setTimeout(() => {
       setReaction("");
       setImpact("");
-      setCharacterPose("normal");
+      setCharacterPose((prev) => (prev === "ko" ? "ko" : "normal"));
     }, isUltra ? 720 : 480);
   }
 
   function triggerKO(latestStats) {
     setIsKO(true);
     setCharacterPose("ko");
+    setCharging(false);
+    setChargePercent(0);
 
     const nextKoCount = (latestStats.koCount || 0) + 1;
     const nextStats = { ...latestStats, koCount: nextKoCount };
@@ -483,6 +485,10 @@ function App() {
       <main
         className={`stage ${impact} ${charging ? "charging" : ""}`}
         onContextMenu={(e) => e.preventDefault()}
+        onPointerUp={() => {
+          setChargePercent(0);
+          setCharging(false);
+        }}
       >
         {flash && <div className={`screen-flash ${flash}`} />}
         {charging && <div className="charge-aura">POWER</div>}
@@ -544,6 +550,10 @@ function App() {
             onPointerDown={startCharge}
             onPointerUp={(event) => endCharge(key, event)}
             onPointerCancel={() => {
+              setChargePercent(0);
+              setCharging(false);
+            }}
+            onPointerLeave={() => {
               setChargePercent(0);
               setCharging(false);
             }}
