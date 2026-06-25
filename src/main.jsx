@@ -7,7 +7,7 @@ const SUPABASE_URL = "https://ydgnnikfmesvosghsdeg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZ25uaWtmbWVzdm9zZ2hzZGVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzI3NTcsImV4cCI6MjA5NzQwODc1N30.2fZgjUNFJVm3PrUsfqeO8Eu9UwyFoHYj9ao1Js6VFCg";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const VERSION = "v3.6";
+const VERSION = "v3.8";
 
 const COMBO_LIMIT_MS = 500;
 const MAX_HP = 10000;
@@ -605,13 +605,16 @@ function App() {
     }
 
     const nextKoCount = (latestStats.koCount || 0) + 1;
-    const nextStats   = { ...latestStats, koCount: nextKoCount };
+    const KO_BONUS    = 10000;
+    const nextStats   = { ...latestStats, koCount: nextKoCount, totalDamage: latestStats.totalDamage + KO_BONUS };
     setStats(nextStats);
     setKoCount(nextKoCount);
     localStorage.setItem("punch_stats", JSON.stringify(nextStats));
 
+    // KO 보너스 포인트도 Supabase에 반영
     const d = sessionDelta.current;
-    d.koCount += 1;
+    d.koCount     += 1;
+    d.totalDamage += KO_BONUS;
     syncToSupabase(nickname, { ...d });
     sessionDelta.current = { hits: 0, totalDamage: 0, koCount: 0, bestCombo: 0 };
 
@@ -1059,6 +1062,9 @@ function App() {
                   <div className="ko-killer">
                     {lastKoBy === nickname ? "⚡ 내가 KO시켰다!" : `💀 ${lastKoBy}의 KO!`}
                   </div>
+                )}
+                {lastKoBy === nickname && (
+                  <div className="ko-bonus">+10,000 pt 보너스! 🎉</div>
                 )}
                 <div className="ko-sub">재선임 중…</div>
               </>
