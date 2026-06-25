@@ -103,6 +103,7 @@ function App() {
   const [chargePercent,  setChargePercent]  = useState(0);
   const [charging,       setCharging]       = useState(false);
   const [chargeLevelLive,setChargeLevelLive]= useState(0);
+  const [crosshairPos,   setCrosshairPos]   = useState({ x: 50, y: 50 }); // % 기준
   const [floatingEffects,setFloatingEffects]= useState([]);
   const [speech,         setSpeech]         = useState("");
   const [isReviveSpeech, setIsReviveSpeech] = useState(false);
@@ -240,6 +241,12 @@ function App() {
     setCharging(true);
     setChargePercent(100);
     setChargeLevelLive(0);
+
+    // 조준경 초기 위치 설정
+    const rect = event.currentTarget.parentElement.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 100;
+    const y = ((event.clientY - rect.top) / rect.height) * 100;
+    setCrosshairPos({ x, y });
     function tick() {
       const elapsed = Date.now() - pressStart.current;
       let level = 0;
@@ -552,9 +559,23 @@ function App() {
         {charging && <div className={`charge-power charge-power-${chargeLevelLive}`}>POWER</div>}
 
         {/* 조준경 */}
-        <div className={`crosshair ${charging ? `lv${chargeLevelLive}` : ""}`}>
-          <div className="crosshair-center" />
-        </div>
+        {charging && (
+          <div
+            className={`crosshair lv${chargeLevelLive}`}
+            style={{
+              position: "absolute",
+              left: `${crosshairPos.x}%`,
+              top:  `${crosshairPos.y}%`,
+              transform: "translate(-50%, -50%)",
+              zIndex: 19,
+              pointerEvents: "none",
+            }}
+          >
+            <div className="crosshair-center" />
+            <div className="crosshair-line crosshair-h" />
+            <div className="crosshair-line crosshair-v" />
+          </div>
+        )}
 
         {/* 라운드 타이머 */}
         {koStartAt.current > 0 && !isKO && !isReviving && (
@@ -604,6 +625,13 @@ function App() {
             onPointerUp={(event) => endCharge(key, event)}
             onPointerCancel={cancelCharge}
             onPointerLeave={cancelCharge}
+            onPointerMove={(event) => {
+              if (!charging) return;
+              const rect = event.currentTarget.parentElement.getBoundingClientRect();
+              const x = ((event.clientX - rect.left) / rect.width) * 100;
+              const y = ((event.clientY - rect.top) / rect.height) * 100;
+              setCrosshairPos({ x, y });
+            }}
           />
         ))}
       </main>
