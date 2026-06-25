@@ -106,6 +106,10 @@ function App() {
   const [crosshairPos,   setCrosshairPos]   = useState({ x: 50, y: 50 }); // % 기준
   const [dodgeOffset,    setDodgeOffset]    = useState(0); // 캐릭터 좌우 이동 px
   const dodgeRafRef = useRef(null);
+  const [missEffects,    setMissEffects]    = useState([]);
+  const hitZoneTriggered = useRef(false); // 히트존에서 올라온 이벤트인지 추적
+  const characterImgRef  = useRef(null);  // 캐릭터 img 태그 ref
+  const canvasRef        = useRef(null);  // 픽셀 판정용 숨겨진 canvas
   const [floatingEffects,setFloatingEffects]= useState([]);
   const [speech,         setSpeech]         = useState("");
   const [isReviveSpeech, setIsReviveSpeech] = useState(false);
@@ -305,6 +309,8 @@ function App() {
   // ── 타격 ────────────────────────────────────────
   function endCharge(zoneKey, event) {
     event.preventDefault();
+    event.stopPropagation(); // stage onPointerUp으로 버블링 방지
+    hitZoneTriggered.current = true;
     if (isKO || isReviving) return;
 
     const zone = ZONES[zoneKey];
@@ -460,7 +466,60 @@ function App() {
     setTimeout(() => setFloatingEffects((prev) => prev.filter((i) => i.id !== id)), 850);
   }
 
-  function showSpeech(zone, isCritical, isUltra) {
+  // ── 픽셀 판정: 터치 위치가 캐릭터 실제 픽셀인지 확인 ──
+  function isPixelHit(clientX, clientY) {
+    const img = characterImgRef.current;
+    if (!img) return true; // 이미지 없으면 히트로 처리
+
+    const imgRect = img.getBoundingClientRect();
+
+    // 이미지 영역 밖이면 바로 MISS
+    if (
+      clientX < imgRect.left || clientX > imgRect.right ||
+      clientY < imgRect.top  || clientY > imgRect.bottom
+    ) return false;
+
+    // 이미지 내 상대 좌표 → 실제 픽셀 좌표로 변환
+    const scaleX = img.naturalWidth  / imgRect.width;
+    const scaleY = img.naturalHeight / imgRect.height;
+    const px = Math.floor((clientX - imgRect.left) * scaleX);
+    const py = Math.floor((clientY - imgRect.top)  * scaleY);
+
+    try {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+
+      // canvas 크기가 이미지와 다르면 다시 그리기
+      if (canvas.width !== img.naturalWidth || canvas.height !== img.naturalHeight) {
+        canvas.width  = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        ctx.drawImage(img, 0, 0);
+      }
+
+      const pixel = ctx.getImageData(px, py, 1, 1).data;
+      return pixel[3] > 30; // 알파값 30 이상이면 히트
+    } catch (e) {
+      return true; // CORS 등 오류 시 히트로 처리
+    }
+  }
+
+  function triggerMiss(x, y) {
+    // 콤보 초기화
+    setStats((prev) => {
+      const next = { ...prev, combo: 0 };
+      localStorage.setItem("punch_stats", JSON.stringify(next));
+      return next;
+    });
+    if (comboResetTimer.current) {
+      clearTimeout(comboResetTimer.current);
+      comboResetTimer.current = null;
+    }
+
+    // MISS 이펙트 표시
+    const id = effectId.current++;
+    setMissEffects((prev) => [...prev, { id, x, y }]);
+    setTimeout(() => setMissEffects((prev) => prev.filter((i) => i.id !== id)), 700);
+  }
     const lines = isUltra
       ? ["으아아악!!", "잠깐만!!", "너무 강해!!", "내 안에 뭔가가 움직였다"]
       : isCritical
@@ -590,7 +649,24 @@ function App() {
       <main
         className={`stage ${impact} ${charging ? "charging" : ""}`}
         onContextMenu={(e) => e.preventDefault()}
-        onPointerUp={cancelCharge}
+        onPointerUp={(e) => {
+          if (!isKO && !isReviving) {
+            // 히트존에서 온 이벤트가 아니고, 실제 픽셀도 없으면 MISS
+            if (!hitZoneTriggered.current || !isPixelHit(e.clientX, e.clientY)) {
+              if (!hitZoneTriggered.current) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                // 픽셀 판정 - 캐릭터 이미지 픽셀이 없는 곳이면 MISS
+                if (!isPixelHit(e.clientX, e.clientY)) {
+                  triggerMiss(x, y);
+                }
+              }
+            }
+          }
+          hitZoneTriggered.current = false;
+          cancelCharge();
+        }}
       >
         {flash && <div className={`screen-flash ${flash}`} />}
         {charging && <div className={`charge-power charge-power-${chargeLevelLive}`}>POWER</div>}
@@ -649,6 +725,13 @@ function App() {
             <div className="hit-label">{item.label}</div>
             <div className="hit-damage">+{item.damage}</div>
             {item.combo >= 2 && <div className="hit-combo">{item.combo} COMBO</div>}
+          </div>
+        ))}
+
+        {/* MISS 이펙트 */}
+        {missEffects.map((item) => (
+          <div key={item.id} className="miss-effect" style={{ left: item.x, top: item.y }}>
+            MISS
           </div>
         ))}
 
