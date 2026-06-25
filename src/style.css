@@ -1,877 +1,580 @@
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  max-width: 100%;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-}
-
-html,
-body,
-#root {
-  margin: 0;
-  width: 100%;
-  min-height: 100%;
-  overflow-x: hidden;
-  background: #0f0f14;
-  color: #ffffff;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  touch-action: manipulation;
-  overscroll-behavior-x: none;
-}
-
-body {
-  display: flex;
-  justify-content: center;
-}
-
-button,
-input {
-  font-family: inherit;
-}
-
-button {
-  border: 0;
-  cursor: pointer;
-}
-
-img {
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-  -webkit-user-drag: none;
-}
-
-.app {
-  width: min(100%, 430px);
-  min-height: 100svh;
-  margin: 0 auto;
-  padding: calc(env(safe-area-inset-top, 0px) + 12px) 14px 18px;
-  overflow-x: hidden;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(255, 211, 53, 0.1), transparent 34%),
-    linear-gradient(180deg, #151517 0%, #0f0f14 42%, #0f0f14 100%);
-}
-
-.intro {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 14px;
-  text-align: center;
-}
-
-h1 {
-  margin: 0;
-  color: #ffd335;
-  font-size: clamp(30px, 8vw, 38px);
-  font-weight: 950;
-  letter-spacing: -1.5px;
-  line-height: 1.02;
-  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.38);
-}
-
-p {
-  margin: 0;
-}
-
-.intro p {
-  color: #d7d7df;
-  font-size: 15px;
-}
-
-input {
-  width: 100%;
-  margin-top: 18px;
-  padding: 15px 16px;
-  border: 0;
-  border-radius: 14px;
-  outline: none;
-  font-size: 17px;
-  background: #ffffff;
-  color: #111111;
-  user-select: text;
-  -webkit-user-select: text;
-}
-
-.primary-button {
-  width: 100%;
-  padding: 15px;
-  border-radius: 14px;
-  background: linear-gradient(180deg, #ff5151, #e72f2f);
-  color: #ffffff;
-  font-size: 18px;
-  font-weight: 900;
-  box-shadow: 0 8px 0 #9f1d1d;
-}
-
-.primary-button:active {
-  transform: translateY(4px);
-  box-shadow: 0 4px 0 #9f1d1d;
-}
-
-/* 상단 */
-.top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.top p {
-  margin-top: 5px;
-  color: #f0f0f2;
-  font-size: 15px;
-  line-height: 1.1;
-}
-
-.small-button {
-  flex: 0 0 auto;
-  margin-top: 4px;
-  padding: 8px 11px;
-  border-radius: 999px;
-  background: #ffffff;
-  color: #247bff;
-  font-size: 14px;
-  font-weight: 900;
-  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.28);
-}
-
-/* ── HP Bar ─────────────────────────────────── */
-.hp-section {
-  margin-bottom: 10px;
-}
-
-.hp-label-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 5px;
-}
-
-.hp-title {
-  font-size: 13px;
-  font-weight: 900;
-  color: #f0f0f2;
-  letter-spacing: 1px;
-}
-
-.hp-value {
-  font-size: 13px;
-  font-weight: 700;
-  color: #c0c0c8;
-}
-
-.hp-bar-track {
-  width: 100%;
-  height: 14px;
-  border-radius: 999px;
-  background: #1e1e25;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
-    inset 0 2px 6px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
-}
-
-.hp-bar-fill {
-  height: 100%;
-  border-radius: 999px;
-  transition: width 0.22s ease, background 0.4s ease;
-}
-
-.hp-green {
-  background: linear-gradient(90deg, #3ddc6a, #65ff38);
-  box-shadow: 0 0 10px rgba(101, 255, 56, 0.55);
-}
-
-.hp-yellow {
-  background: linear-gradient(90deg, #e8b800, #ffd335);
-  box-shadow: 0 0 10px rgba(255, 211, 53, 0.55);
-  animation: hpPulse 0.7s ease-in-out infinite alternate;
-}
-
-.hp-red {
-  background: linear-gradient(90deg, #cc2020, #ff3838);
-  box-shadow: 0 0 12px rgba(255, 56, 56, 0.7);
-  animation: hpPulse 0.4s ease-in-out infinite alternate;
-}
-
-.hp-empty {
-  width: 0 !important;
-}
-
-@keyframes hpPulse {
-  from { filter: brightness(1); }
-  to   { filter: brightness(1.4); }
-}
-
-/* 점수판: 2x2 카드 */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.stats div,
-.stats div:nth-child(4) {
-  grid-column: auto;
-}
-
-.stats div {
-  min-width: 0;
-  min-height: 58px;
-  padding: 8px 8px;
-  border-radius: 16px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
-    #202027;
-  text-align: center;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.045),
-    0 8px 18px rgba(0, 0, 0, 0.18);
-}
-
-.stats span {
-  display: block;
-  color: #e8e8ee;
-  font-size: 12px;
-  line-height: 1.15;
-  white-space: nowrap;
-}
-
-.stats b {
-  display: block;
-  margin-top: 3px;
-  color: #ffd335;
-  font-size: clamp(25px, 8vw, 34px);
-  font-weight: 950;
-  line-height: 1;
-  letter-spacing: -1px;
-}
-
-/* 게임판 */
-.stage {
-  position: relative;
-  width: 100%;
-  height: clamp(350px, 48svh, 430px);
-  margin-top: 8px;
-  border: 2px solid #323238;
-  border-radius: 24px;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 50% 60%, rgba(255, 255, 255, 0.08), transparent 25%),
-    radial-gradient(circle at 50% 100%, rgba(255, 211, 53, 0.08), transparent 35%),
-    linear-gradient(180deg, #19191d 0%, #121216 100%);
-  touch-action: none;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
-    0 14px 24px rgba(0, 0, 0, 0.22);
-}
-
-.stage::before {
-  content: "";
-  position: absolute;
-  inset: 12px;
-  border-radius: 19px;
-  background:
-    linear-gradient(115deg, transparent 0 44%, rgba(255, 255, 255, 0.035) 45% 47%, transparent 48%),
-    repeating-radial-gradient(circle at center, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 12px);
-  pointer-events: none;
-}
-
-/* 캐릭터 */
-.target-wrap {
-  position: absolute;
-  left: 50%;
-  bottom: 2px;
-  width: min(340px, 92vw);
-  height: 100%;
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-.character {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  width: min(360px, 96vw);
-  max-width: none;
-  transform: translateX(-50%);
-  transform-origin: 50% 74%;
-  user-select: none;
-  pointer-events: none;
-  filter: drop-shadow(0 16px 14px rgba(0, 0, 0, 0.55));
-  transition: transform 0.08s ease-out, filter 0.08s ease-out;
-  will-change: transform;
-}
-
-.character.hit-head {
-  animation: hitHead 0.34s ease-out;
-}
-
-.character.hit-face {
-  animation: hitFace 0.34s ease-out;
-}
-
-.character.hit-body {
-  animation: hitBody 0.34s ease-out;
-}
-
-.character.hit-groin {
-  animation: hitGroin 0.45s ease-out;
-}
-
-.character.hit-leg {
-  animation: hitLeg 0.34s ease-out;
-}
-
-.character.critical {
-  animation: criticalHit 0.42s ease-out;
-  filter:
-    drop-shadow(0 0 18px rgba(255, 60, 60, 0.95))
-    drop-shadow(0 16px 14px rgba(0, 0, 0, 0.55));
-}
-
-.character.super-critical {
-  animation: ultraHit 0.62s ease-out;
-  filter:
-    drop-shadow(0 0 26px rgba(255, 211, 53, 1))
-    drop-shadow(0 0 16px rgba(255, 60, 60, 0.95))
-    drop-shadow(0 16px 14px rgba(0, 0, 0, 0.55));
-}
-
-/* 말풍선 */
-.speech-bubble {
-  position: absolute;
-  z-index: 14;
-  left: 50%;
-  top: 9%;
-  transform: translateX(-50%);
-  max-width: 92%;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: #ffffff;
-  color: #111111;
-  font-size: 14px;
-  font-weight: 900;
-  white-space: nowrap;
-  box-shadow: 0 7px 0 rgba(0, 0, 0, 0.32);
-  animation: speechPop 0.82s ease-out forwards;
-}
-
-.speech-bubble::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: -8px;
-  transform: translateX(-50%);
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 9px solid #ffffff;
-}
-
-.screen-flash {
-  position: absolute;
-  inset: 0;
-  z-index: 50;
-  pointer-events: none;
-}
-
-.critical-flash {
-  background: rgba(255, 255, 255, 0.42);
-  animation: flashOut 0.09s ease-out forwards;
-}
-
-.ultra-flash {
-  background: rgba(255, 211, 53, 0.45);
-  animation: flashOut 0.13s ease-out forwards;
-}
-
-.shake,
-.impact-small {
-  animation: screenShakeSmall 0.16s ease-out;
-}
-
-.impact-body {
-  animation: screenShakeBody 0.22s ease-out;
-}
-
-.impact-critical {
-  animation: screenShakeCritical 0.36s ease-out;
-}
-
-.impact-ultra {
-  animation: screenShakeUltra 0.48s ease-out;
-}
-
-.stage.charging {
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 211, 53, 0.18),
-    0 0 28px rgba(255, 211, 53, 0.22),
-    0 14px 24px rgba(0, 0, 0, 0.22);
-}
-
-.charge-aura {
-  position: absolute;
-  z-index: 18;
-  left: 50%;
-  bottom: 32%;
-  transform: translateX(-50%);
-  width: 190px;
-  height: 190px;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  color: rgba(255, 211, 53, 0.85);
-  font-size: 18px;
-  font-weight: 1000;
-  letter-spacing: 1px;
-  background:
-    radial-gradient(circle, rgba(255, 211, 53, 0.22) 0 16%, transparent 38%),
-    conic-gradient(from 0deg, transparent 0 18%, rgba(255, 211, 53, 0.42), transparent 45% 100%);
-  filter: drop-shadow(0 0 18px rgba(255, 211, 53, 0.55));
-  animation: chargeAuraSpin 0.8s linear infinite;
-  pointer-events: none;
-}
-
-.power-effect .hit-label,
-.power-effect .hit-damage {
-  color: #65ff38;
-}
-
-.power-effect .hit-emoji {
-  font-size: 46px;
-  filter:
-    drop-shadow(0 0 12px rgba(101, 255, 56, 0.85))
-    drop-shadow(0 4px 0 rgba(0, 0, 0, 0.55));
-}
-
-@keyframes chargeAuraSpin {
-  from {
-    transform: translateX(-50%) rotate(0deg) scale(0.92);
-    opacity: 0.65;
-  }
-  50% {
-    transform: translateX(-50%) rotate(180deg) scale(1.08);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(-50%) rotate(360deg) scale(0.92);
-    opacity: 0.65;
-  }
-}
-
-.hit-zone {
-  position: absolute;
-  z-index: 20;
-  background: transparent;
-  border: 0;
-  outline: none;
-  touch-action: none;
-}
-
-/* 히트박스 확인용 */
-/* .hit-zone { background: rgba(0, 145, 255, 0.22); outline: 1px solid rgba(0,145,255,0.5); } */
-
-.head-zone {
-  left: 37%;
-  top: 27%;
-  width: 26%;
-  height: 9%;
-}
-
-.face-zone {
-  left: 36%;
-  top: 35%;
-  width: 28%;
-  height: 9%;
-}
-
-.philtrum-zone {
-  left: 44%;
-  top: 41%;
-  width: 12%;
-  height: 5%;
-}
-
-.chest-zone {
-  left: 37%;
-  top: 49%;
-  width: 26%;
-  height: 8%;
-}
-
-.belly-zone {
-  left: 36%;
-  top: 57%;
-  width: 28%;
-  height: 8%;
-}
-
-.groin-zone {
-  left: 40%;
-  top: 65%;
-  width: 20%;
-  height: 7%;
-}
-
-.leg-zone {
-  left: 31%;
-  top: 71%;
-  width: 38%;
-  height: 18%;
-}
-
-.floating-effect {
-  position: absolute;
-  z-index: 30;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  pointer-events: none;
-  animation: floatUp 0.85s ease-out forwards;
-}
-
-.hit-emoji {
-  font-size: 32px;
-  line-height: 1;
-  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.55));
-}
-
-.hit-label {
-  margin-top: -2px;
-  color: #ffffff;
-  font-size: 16px;
-  font-weight: 1000;
-  text-shadow:
-    2px 2px 0 #000,
-    0 0 14px rgba(255, 255, 255, 0.5);
-}
-
-.hit-damage {
-  color: #65ff38;
-  font-size: 25px;
-  font-weight: 1000;
-  text-shadow:
-    2px 2px 0 #000,
-    0 0 16px rgba(101, 255, 56, 0.85);
-}
-
-.hit-combo {
-  margin-top: -2px;
-  color: #ffd335;
-  font-size: 13px;
-  font-weight: 900;
-  text-shadow: 2px 2px 0 #000;
-}
-
-.critical-effect .hit-label,
-.critical-effect .hit-damage {
-  color: #ffd335;
-}
-
-.ultra-effect .hit-emoji {
-  font-size: 46px;
-}
-
-.ultra-effect .hit-label {
-  color: #ff3838;
-  font-size: 26px;
-}
-
-.ultra-effect .hit-damage {
-  color: #ffd335;
-  font-size: 36px;
-}
-
-.charge-box {
-  margin: 8px 0 10px;
-  text-align: center;
-}
-
-.charge-label {
-  margin-bottom: 6px;
-  color: #f3f3f4;
-  font-size: 15px;
-  font-weight: 800;
-}
-
-.charge-bar {
-  width: 100%;
-  height: 15px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: #222229;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
-    inset 0 2px 8px rgba(0, 0, 0, 0.5);
-}
-
-.charge-bar div {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #65ff38, #ffd335, #ff3838);
-  box-shadow: 0 0 16px rgba(255, 211, 53, 0.5);
-  transition: width 0.18s ease;
-  animation: chargePulse 0.55s ease-in-out infinite alternate;
-}
-
-/* 로그 */
-.log {
-  min-height: 92px;
-  max-height: 156px;
-  overflow-y: auto;
-  padding: 13px 13px 15px;
-  border-radius: 18px;
-  background: #1b1b22;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
-}
-
-.log b {
-  display: block;
-  margin-bottom: 9px;
-  font-size: 19px;
-}
-
-.log p {
-  margin: 6px 0;
-  color: #e9e9ed;
-  font-size: 14px;
-  line-height: 1.25;
-}
-
-/* ── KO 오버레이 ─────────────────────────────── */
-.ko-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 40;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  pointer-events: none;
-}
-
-.ko-active {
-  background: rgba(10, 0, 0, 0.72);
-  animation: koFadeIn 0.25s ease-out;
-}
-
-.reviving {
-  background: rgba(10, 10, 10, 0.55);
-  animation: koFadeIn 0.35s ease-out;
-}
-
-.ko-text {
-  font-size: clamp(64px, 18vw, 88px);
-  font-weight: 950;
-  color: #ff3838;
-  letter-spacing: -3px;
-  line-height: 1;
-  text-shadow:
-    0 0 40px rgba(255, 56, 56, 0.9),
-    0 6px 0 #7a0000,
-    4px 4px 0 #000;
-  animation: koBounce 0.45s cubic-bezier(0.22, 1.5, 0.5, 1) forwards;
-}
-
-.ko-revive-text {
-  font-size: clamp(28px, 8vw, 40px);
-  font-weight: 950;
-  color: #ffd335;
-  letter-spacing: -1px;
-  text-shadow:
-    0 0 22px rgba(255, 211, 53, 0.8),
-    0 4px 0 #7a5a00;
-  animation: koBounce 0.35s cubic-bezier(0.22, 1.5, 0.5, 1) forwards;
-}
-
-.ko-sub {
-  font-size: 16px;
-  font-weight: 700;
-  color: #c8c8d0;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
-}
-
-@keyframes koFadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-@keyframes koBounce {
-  0%   { transform: scale(0.3) rotate(-8deg); opacity: 0; }
-  60%  { transform: scale(1.12) rotate(2deg); opacity: 1; }
-  100% { transform: scale(1) rotate(0deg);    opacity: 1; }
-}
-
-@keyframes chargePulse {
-  from {
-    filter: brightness(1);
-    box-shadow: 0 0 12px rgba(255, 211, 53, 0.45);
-  }
-  to {
-    filter: brightness(1.45);
-    box-shadow: 0 0 24px rgba(255, 211, 53, 0.9);
-  }
-}
-
-@keyframes hitHead {
-  0% { transform: translateX(-50%) rotate(0deg); }
-  25% { transform: translateX(-54%) rotate(-10deg) translateY(-8px); }
-  55% { transform: translateX(-46%) rotate(6deg); }
-  100% { transform: translateX(-50%) rotate(0deg); }
-}
-
-@keyframes hitFace {
-  0% { transform: translateX(-50%) rotate(0deg); }
-  22% { transform: translateX(-62%) rotate(-15deg) scale(0.98); }
-  54% { transform: translateX(-42%) rotate(8deg); }
-  100% { transform: translateX(-50%) rotate(0deg); }
-}
-
-@keyframes hitBody {
-  0% { transform: translateX(-50%) translateY(0); }
-  28% { transform: translateX(-43%) translateY(12px) scale(0.94); }
-  58% { transform: translateX(-54%) translateY(-4px) scale(1.03); }
-  100% { transform: translateX(-50%) translateY(0); }
-}
-
-@keyframes hitGroin {
-  0% { transform: translateX(-50%) translateY(0) rotate(0deg); }
-  22% { transform: translateX(-50%) translateY(-36px) rotate(-6deg) scale(0.98); }
-  45% { transform: translateX(-52%) translateY(10px) rotate(8deg) scale(0.94); }
-  70% { transform: translateX(-48%) translateY(-10px) rotate(-4deg); }
-  100% { transform: translateX(-50%) translateY(0) rotate(0deg); }
-}
-
-@keyframes hitLeg {
-  0% { transform: translateX(-50%) rotate(0deg); }
-  30% { transform: translateX(-56%) rotate(-7deg) translateY(16px); }
-  60% { transform: translateX(-46%) rotate(5deg) translateY(0); }
-  100% { transform: translateX(-50%) rotate(0deg); }
-}
-
-@keyframes criticalHit {
-  0% { transform: translateX(-50%) scale(1) rotate(0deg); }
-  20% { transform: translateX(-68%) scale(1.09) rotate(-17deg); }
-  55% { transform: translateX(-34%) scale(0.95) rotate(14deg); }
-  100% { transform: translateX(-50%) scale(1) rotate(0deg); }
-}
-
-@keyframes ultraHit {
-  0% { transform: translateX(-50%) translateY(0) scale(1) rotate(0deg); }
-  18% { transform: translateX(-78%) translateY(-48px) scale(1.18) rotate(-24deg); }
-  45% { transform: translateX(-20%) translateY(18px) scale(0.9) rotate(22deg); }
-  72% { transform: translateX(-57%) translateY(-14px) scale(1.06) rotate(-9deg); }
-  100% { transform: translateX(-50%) translateY(0) scale(1) rotate(0deg); }
-}
-
-@keyframes screenShakeSmall {
-  0% { transform: translate(0, 0); }
-  30% { transform: translate(-4px, 1px); }
-  60% { transform: translate(4px, -1px); }
-  100% { transform: translate(0, 0); }
-}
-
-@keyframes screenShakeBody {
-  0% { transform: translate(0, 0) scale(1); }
-  20% { transform: translate(-7px, 3px) scale(1.01); }
-  45% { transform: translate(7px, -2px) scale(1.01); }
-  70% { transform: translate(-3px, 1px) scale(1); }
-  100% { transform: translate(0, 0) scale(1); }
-}
-
-@keyframes screenShakeCritical {
-  0% { transform: translate(0, 0) scale(1); }
-  12% { transform: translate(-13px, 4px) scale(1.015); }
-  25% { transform: translate(13px, -4px) scale(1.015); }
-  38% { transform: translate(-10px, 3px) scale(1.01); }
-  52% { transform: translate(10px, -3px) scale(1.01); }
-  70% { transform: translate(-5px, 1px) scale(1); }
-  100% { transform: translate(0, 0) scale(1); }
-}
-
-@keyframes screenShakeUltra {
-  0% { transform: translate(0, 0) scale(1); }
-  10% { transform: translate(-19px, 7px) scale(1.025); }
-  22% { transform: translate(19px, -7px) scale(1.03); }
-  34% { transform: translate(-16px, -4px) scale(1.025); }
-  46% { transform: translate(16px, 4px) scale(1.02); }
-  60% { transform: translate(-10px, 2px) scale(1.01); }
-  78% { transform: translate(7px, -1px) scale(1); }
-  100% { transform: translate(0, 0) scale(1); }
-}
-
-@keyframes floatUp {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -40%) scale(0.45) rotate(-10deg);
-  }
-  18% {
-    opacity: 1;
-    transform: translate(-50%, -70%) scale(1.18) rotate(4deg);
-  }
-  70% {
-    opacity: 1;
-    transform: translate(-50%, -125%) scale(1) rotate(-2deg);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -175%) scale(0.85) rotate(0deg);
-  }
-}
-
-@keyframes speechPop {
-  0% {
-    opacity: 0;
-    transform: translateX(-50%) scale(0.55) translateY(10px);
-  }
-  18% {
-    opacity: 1;
-    transform: translateX(-50%) scale(1.05) translateY(0);
-  }
-  72% {
-    opacity: 1;
-    transform: translateX(-50%) scale(1) translateY(-4px);
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(-50%) scale(0.95) translateY(-16px);
-  }
-}
-
-@keyframes flashOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
-@media (max-width: 390px) {
-  .app {
-    padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 16px;
+import React, { useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
+import "./style.css";
+
+const COMBO_LIMIT_MS = 500;
+const MAX_HP = 3000;
+
+const ZONES = {
+  head: {
+    name: "머리",
+    min: 8,
+    max: 16,
+    reaction: "hit-head",
+    hitbox: "head-zone",
+    weak: false,
+    pose: "backHead",
+    line: ["아!", "어우!", "머리 울려!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
+  },
+  face: {
+    name: "얼굴",
+    min: 11,
+    max: 24,
+    reaction: "hit-face",
+    hitbox: "face-zone",
+    weak: false,
+    pose: "normal",
+    line: ["으악!", "아야!", "얼굴은 반칙!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
+  },
+  philtrum: {
+    name: "인중",
+    min: 15,
+    max: 30,
+    reaction: "hit-face",
+    hitbox: "philtrum-zone",
+    weak: true,
+    pose: "normal",
+    line: ["끄억!", "인중은 안 돼!", "눈물 난다!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
+  },
+  chest: {
+    name: "명치",
+    min: 16,
+    max: 32,
+    reaction: "hit-body",
+    hitbox: "chest-zone",
+    weak: true,
+    pose: "body",
+    line: ["컥!", "숨 막혀!", "명치...!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
+  },
+  belly: {
+    name: "배",
+    min: 9,
+    max: 19,
+    reaction: "hit-body",
+    hitbox: "belly-zone",
+    weak: false,
+    pose: "body",
+    line: ["윽!", "배 아파!", "오우!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
+  },
+  groin: {
+    name: "급소",
+    min: 14,
+    max: 28,
+    reaction: "hit-groin",
+    hitbox: "groin-zone",
+    weak: true,
+    pose: "body",
+    line: ["으아아악!", "그건 아니지!", "잠깐만!!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
+  },
+  leg: {
+    name: "다리",
+    min: 6,
+    max: 14,
+    reaction: "hit-leg",
+    hitbox: "leg-zone",
+    weak: false,
+    pose: "normal",
+    line: ["휘청!", "다리 풀린다!", "아야!", "내 안에 뭔가가 움직였다", "나를 버렸습니다.", "이게 팀이야"],
+  },
+};
+
+const CHARACTER_IMAGES = {
+  normal: "/coach_red.png",
+  backHead: "/coach_red2.png",
+  body: "/coach_red3.png",
+  ko: "/coach_red4.png",
+};
+
+function App() {
+  const pressStart = useRef(0);
+  const effectId = useRef(1);
+  const lastHitAt = useRef(0);
+  const comboResetTimer = useRef(null);
+
+  const [nickname, setNickname] = useState(
+    localStorage.getItem("punch_nickname") || ""
+  );
+  const [started, setStarted] = useState(
+    !!localStorage.getItem("punch_nickname")
+  );
+
+  const [stats, setStats] = useState(() => {
+    return JSON.parse(
+      localStorage.getItem("punch_stats") ||
+        '{"hits":0,"totalDamage":0,"maxDamage":0,"combo":0,"koCount":0}'
+    );
+  });
+
+  const [hp, setHp] = useState(MAX_HP);
+  const [isKO, setIsKO] = useState(false);
+  const [isReviving, setIsReviving] = useState(false);
+  const [koCount, setKoCount] = useState(
+    () => JSON.parse(localStorage.getItem("punch_stats") || "{}").koCount || 0
+  );
+
+  const [log, setLog] = useState([]);
+  const [reaction, setReaction] = useState("");
+  const [impact, setImpact] = useState("");
+  const [characterPose, setCharacterPose] = useState("normal");
+  const [chargePercent, setChargePercent] = useState(0);
+  const [charging, setCharging] = useState(false);
+  const [floatingEffects, setFloatingEffects] = useState([]);
+  const [speech, setSpeech] = useState("");
+  const [flash, setFlash] = useState("");
+
+  function startGame() {
+    const cleanName = nickname.trim();
+    if (!cleanName) {
+      alert("닉네임을 입력해줘!");
+      return;
+    }
+
+    localStorage.setItem("punch_nickname", cleanName);
+    setNickname(cleanName);
+    setStarted(true);
   }
 
-  .stage {
-    height: clamp(340px, 47svh, 395px);
+  function resetGame() {
+    const resetStats = {
+      hits: 0,
+      totalDamage: 0,
+      maxDamage: 0,
+      combo: 0,
+      koCount: 0,
+    };
+
+    localStorage.setItem("punch_stats", JSON.stringify(resetStats));
+    setStats(resetStats);
+    setKoCount(0);
+    setHp(MAX_HP);
+    setIsKO(false);
+    setIsReviving(false);
+    setLog([]);
+    setReaction("");
+    setImpact("");
+    setCharacterPose("normal");
+    setChargePercent(0);
+    setCharging(false);
+    setFloatingEffects([]);
+    setSpeech("");
+    setFlash("");
+    lastHitAt.current = 0;
+
+    if (comboResetTimer.current) {
+      clearTimeout(comboResetTimer.current);
+      comboResetTimer.current = null;
+    }
   }
 
-  .target-wrap {
-    width: min(326px, 92vw);
+  function startCharge(event) {
+    event.preventDefault();
+    pressStart.current = Date.now();
+    setCharging(true);
+    setChargePercent(100);
   }
 
-  .character {
-    width: min(344px, 96vw);
+  function endCharge(zoneKey, event) {
+    event.preventDefault();
+    if (isKO || isReviving) return;
+
+    const zone = ZONES[zoneKey];
+    if (!zone) return;
+
+    const rect = event.currentTarget.parentElement.getBoundingClientRect();
+    const touchX = event.clientX - rect.left;
+    const touchY = event.clientY - rect.top;
+
+    const now = Date.now();
+    const isComboContinuing = now - lastHitAt.current <= COMBO_LIMIT_MS;
+    const nextCombo = isComboContinuing ? stats.combo + 1 : 1;
+    lastHitAt.current = now;
+
+    if (comboResetTimer.current) clearTimeout(comboResetTimer.current);
+
+    comboResetTimer.current = setTimeout(() => {
+      setStats((prev) => {
+        const next = { ...prev, combo: 0 };
+        localStorage.setItem("punch_stats", JSON.stringify(next));
+        return next;
+      });
+    }, COMBO_LIMIT_MS);
+
+    const holdTime = Math.min(now - pressStart.current, 2600);
+
+    let chargeMultiplier = 1;
+    let chargeLevel = "normal";
+
+    if (holdTime >= 2200) {
+      chargeMultiplier = random(8, 10);
+      chargeLevel = "max";
+    } else if (holdTime >= 1500) {
+      chargeMultiplier = random(5, 7);
+      chargeLevel = "big";
+    } else if (holdTime >= 800) {
+      chargeMultiplier = random(3, 4);
+      chargeLevel = "medium";
+    } else if (holdTime >= 300) {
+      chargeMultiplier = 2;
+      chargeLevel = "small";
+    }
+
+    const baseDamage = random(zone.min, zone.max);
+    const weakBonus = zone.weak ? 0.16 : 0;
+    const comboBonus = Math.min(nextCombo * 0.02, 0.2);
+    const isCritical = Math.random() < 0.12 + weakBonus + comboBonus;
+    const isUltra =
+      chargeLevel === "max" ||
+      (chargeLevel === "big" && Math.random() < 0.45 + weakBonus) ||
+      (holdTime > 1300 && Math.random() < 0.22 + weakBonus);
+
+    let damage = Math.floor(baseDamage * chargeMultiplier);
+
+    if (isCritical) damage *= 3;
+    if (isUltra) damage *= 5;
+
+    const nextStats = {
+      hits: stats.hits + 1,
+      totalDamage: stats.totalDamage + damage,
+      maxDamage: Math.max(stats.maxDamage, damage),
+      combo: nextCombo,
+      koCount: stats.koCount || 0,
+    };
+
+    setStats(nextStats);
+    localStorage.setItem("punch_stats", JSON.stringify(nextStats));
+
+    setHp((prevHp) => {
+      const nextHp = Math.max(0, prevHp - damage);
+      if (nextHp === 0 && !isKO) {
+        triggerKO(nextStats);
+      }
+      return nextHp;
+    });
+
+    const nextReaction = isUltra
+      ? "super-critical"
+      : isCritical
+      ? "critical"
+      : zone.reaction;
+
+    const nextImpact = isUltra
+      ? "impact-ultra"
+      : isCritical
+      ? "impact-critical"
+      : zone.pose === "body"
+      ? "impact-body"
+      : "impact-small";
+
+    setReaction(nextReaction);
+    setImpact(chargeLevel === "max" ? "impact-ultra" : chargeLevel === "big" ? "impact-critical" : nextImpact);
+    setCharacterPose(zone.pose || "normal");
+    setChargePercent(0);
+    setCharging(false);
+
+    addFloatingEffect({
+      x: touchX,
+      y: touchY,
+      damage,
+      critical: isCritical,
+      ultra: isUltra,
+      combo: nextCombo,
+      chargeLevel,
+    });
+
+    showSpeech(zone, isCritical, isUltra || chargeLevel === "max");
+    showFlash(isCritical, isUltra);
+    vibrate(isUltra, isCritical);
+
+    const message = isUltra
+      ? `🔥 ${zone.name} 풀차지 응원! ${damage} 포인트`
+      : chargeLevel === "big"
+      ? `⚡ ${zone.name} 강력 응원! ${damage} 포인트`
+      : isCritical
+      ? `💥 ${zone.name} 크리티컬 응원! ${damage} 포인트`
+      : `👊 ${zone.name} 응원! ${damage} 포인트`;
+
+    setLog((prev) => [message, ...prev].slice(0, 7));
+
+    setTimeout(() => {
+      setReaction("");
+      setImpact("");
+      setCharacterPose("normal");
+    }, isUltra ? 720 : 480);
   }
 
-  .stats div {
-    min-height: 55px;
+  function triggerKO(latestStats) {
+    setIsKO(true);
+    setCharacterPose("ko");
+
+    const nextKoCount = (latestStats.koCount || 0) + 1;
+    const nextStats = { ...latestStats, koCount: nextKoCount };
+    setStats(nextStats);
+    setKoCount(nextKoCount);
+    localStorage.setItem("punch_stats", JSON.stringify(nextStats));
+
+    vibrate(true, false);
+
+    setTimeout(() => {
+      setIsKO(false);
+      setIsReviving(true);
+      setCharacterPose("normal");
+    }, 3000);
+
+    setTimeout(() => {
+      setIsReviving(false);
+      setHp(MAX_HP);
+    }, 5000);
   }
 
-  .stats b {
-    font-size: 25px;
+  function addFloatingEffect({ x, y, damage, critical, ultra, combo, chargeLevel }) {
+    const id = effectId.current++;
+
+    setFloatingEffects((prev) => [
+      ...prev,
+      {
+        id,
+        x,
+        y,
+        damage,
+        critical,
+        ultra,
+        combo,
+        label: ultra
+          ? "ULTRA!"
+          : chargeLevel === "big" || chargeLevel === "max"
+          ? "POWER!"
+          : critical
+          ? "CRITICAL!"
+          : "HIT!",
+        emoji: ultra ? "💥" : chargeLevel === "big" || chargeLevel === "max" ? "⚡" : critical ? "💢" : "👊",
+        chargeLevel,
+      },
+    ]);
+
+    setTimeout(() => {
+      setFloatingEffects((prev) => prev.filter((item) => item.id !== id));
+    }, 850);
   }
+
+  function showSpeech(zone, isCritical, isUltra) {
+    const lines = isUltra
+      ? ["으아아악!!", "잠깐만!!", "너무 강해!!", "내 안에 뭔가가 움직였다"]
+      : isCritical
+      ? ["악!!", "크윽!!", "제대로 들어왔다!", "나를 버렸습니다.", "이게 팀이야"]
+      : zone.line;
+
+    const nextLine = lines[random(0, lines.length - 1)];
+    setSpeech(nextLine);
+
+    setTimeout(() => {
+      setSpeech("");
+    }, 820);
+  }
+
+  function showFlash(isCritical, isUltra) {
+    if (!isCritical && !isUltra) return;
+
+    setFlash(isUltra ? "ultra-flash" : "critical-flash");
+
+    setTimeout(() => {
+      setFlash("");
+    }, isUltra ? 130 : 90);
+  }
+
+  function vibrate(isUltra, isCritical) {
+    if (!navigator.vibrate) return;
+
+    if (isUltra) {
+      navigator.vibrate([50, 40, 110]);
+      return;
+    }
+
+    if (isCritical) {
+      navigator.vibrate([40, 25, 55]);
+      return;
+    }
+
+    navigator.vibrate(22);
+  }
+
+  function random(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  if (!started) {
+    return (
+      <div className="app intro">
+        <h1>응원하기 👊</h1>
+        <p>응원하고 싶은 캐릭터를 터치해보세요!</p>
+
+        <input
+          value={nickname}
+          onChange={(e) => setNickname(e.target.value)}
+          placeholder="닉네임 입력"
+          maxLength={12}
+        />
+
+        <button className="primary-button" onClick={startGame}>
+          게임 시작
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="app"
+      onContextMenu={(e) => e.preventDefault()}
+      onDragStart={(e) => e.preventDefault()}
+      onSelect={(e) => e.preventDefault()}
+    >
+      <header className="top">
+        <div>
+          <h1>응원하기 👊</h1>
+          <p>{nickname}</p>
+        </div>
+
+        <button className="small-button" onClick={resetGame}>
+          리셋
+        </button>
+      </header>
+
+      {/* HP Bar */}
+      <section className="hp-section">
+        <div className="hp-label-row">
+          <span className="hp-title">HP</span>
+          <span className="hp-value">{hp} / {MAX_HP}</span>
+        </div>
+        <div className="hp-bar-track">
+          <div
+            className={`hp-bar-fill ${
+              hp / MAX_HP > 0.5
+                ? "hp-green"
+                : hp / MAX_HP > 0.25
+                ? "hp-yellow"
+                : hp > 0
+                ? "hp-red"
+                : "hp-empty"
+            }`}
+            style={{ width: `${(hp / MAX_HP) * 100}%` }}
+          />
+        </div>
+      </section>
+
+      <section className="stats">
+        <div>
+          <span>응원</span>
+          <b>{stats.hits}</b>
+        </div>
+        <div>
+          <span>KO</span>
+          <b>{koCount}</b>
+        </div>
+        <div>
+          <span>총 포인트</span>
+          <b>{stats.totalDamage}</b>
+        </div>
+        <div>
+          <span>콤보</span>
+          <b>{stats.combo}</b>
+        </div>
+      </section>
+
+      <main
+        className={`stage ${impact} ${charging ? "charging" : ""}`}
+        onContextMenu={(e) => e.preventDefault()}
+        onPointerUp={() => {
+          setChargePercent(0);
+          setCharging(false);
+        }}
+      >
+        {flash && <div className={`screen-flash ${flash}`} />}
+        {charging && <div className="charge-aura">POWER</div>}
+
+        <div className="target-wrap">
+          {speech && <div className="speech-bubble">{speech}</div>}
+
+          <img
+            className={`character ${reaction}`}
+            src={CHARACTER_IMAGES[characterPose] || CHARACTER_IMAGES.normal}
+            alt="character"
+            draggable="false"
+          />
+        </div>
+
+        {floatingEffects.map((item) => (
+          <div
+            key={item.id}
+            className={`floating-effect ${
+              item.ultra
+                ? "ultra-effect"
+                : item.chargeLevel === "big" || item.chargeLevel === "max"
+                ? "power-effect"
+                : item.critical
+                ? "critical-effect"
+                : ""
+            }`}
+            style={{ left: item.x, top: item.y }}
+          >
+            <div className="hit-emoji">{item.emoji}</div>
+            <div className="hit-label">{item.label}</div>
+            <div className="hit-damage">+{item.damage}</div>
+            {item.combo >= 2 && <div className="hit-combo">{item.combo} COMBO</div>}
+          </div>
+        ))}
+
+        {/* KO 오버레이 */}
+        {(isKO || isReviving) && (
+          <div className={`ko-overlay ${isReviving ? "reviving" : "ko-active"}`}>
+            {isKO ? (
+              <>
+                <div className="ko-text">K.O!!</div>
+                <div className="ko-sub">재선임 중…</div>
+              </>
+            ) : (
+              <>
+                <div className="ko-revive-text">재선임 완료!</div>
+                <div className="ko-sub">새 감독 등장 🔴</div>
+              </>
+            )}
+          </div>
+        )}
+
+        {Object.entries(ZONES).map(([key, zone]) => (
+          <button
+            key={key}
+            aria-label={`${zone.name} hit zone`}
+            className={`hit-zone ${zone.hitbox}`}
+            onPointerDown={startCharge}
+            onPointerUp={(event) => endCharge(key, event)}
+            onPointerCancel={() => {
+              setChargePercent(0);
+              setCharging(false);
+            }}
+            onPointerLeave={() => {
+              setChargePercent(0);
+              setCharging(false);
+            }}
+          />
+        ))}
+      </main>
+
+      <section className="charge-box">
+        <div className="charge-label">꾹 눌러 응원 한방</div>
+        <div className="charge-bar">
+          <div style={{ width: `${chargePercent}%` }} />
+        </div>
+      </section>
+
+      <section className="log">
+        <b>응원 로그</b>
+        {log.length === 0 && <p>캐릭터를 터치해 응원해봐!</p>}
+        {log.map((item, index) => (
+          <p key={`${item}-${index}`}>{item}</p>
+        ))}
+      </section>
+    </div>
+  );
 }
+
+createRoot(document.getElementById("root")).render(<App />);
