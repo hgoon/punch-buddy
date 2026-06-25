@@ -7,7 +7,7 @@ const SUPABASE_URL = "https://ydgnnikfmesvosghsdeg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZ25uaWtmbWVzdm9zZ2hzZGVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzI3NTcsImV4cCI6MjA5NzQwODc1N30.2fZgjUNFJVm3PrUsfqeO8Eu9UwyFoHYj9ao1Js6VFCg";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const VERSION = "v1.8";
+const VERSION = "v1.9";
 
 const COMBO_LIMIT_MS = 500;
 const MAX_HP = 10000;
@@ -317,7 +317,9 @@ function App() {
     const zone = ZONES[zoneKey];
     if (!zone) return;
 
-    const rect   = event.currentTarget.parentElement.getBoundingClientRect();
+    // stage 기준 좌표 (hitzone-wrap이 이동해도 stage는 고정)
+    const stage  = event.currentTarget.closest(".stage");
+    const rect   = stage ? stage.getBoundingClientRect() : event.currentTarget.parentElement.getBoundingClientRect();
 
     // 손가락 뗄 때 위치 기준 (onPointerUp의 실제 좌표)
     const touchX = event.clientX - rect.left;
@@ -663,6 +665,13 @@ function App() {
       <main
         className={`stage ${impact} ${charging ? "charging" : ""}`}
         onContextMenu={(e) => e.preventDefault()}
+        onPointerMove={(event) => {
+          if (!charging) return;
+          const rect = event.currentTarget.getBoundingClientRect();
+          const x = ((event.clientX - rect.left) / rect.width) * 100;
+          const y = ((event.clientY - rect.top) / rect.height) * 100;
+          setCrosshairPos({ x, y });
+        }}
         onPointerUp={(e) => {
           if (!isKO && !isReviving && !hitZoneTriggered.current) {
             const rect = e.currentTarget.getBoundingClientRect();
@@ -776,16 +785,7 @@ function App() {
               onPointerUp={(event) => endCharge(key, event)}
               onPointerCancel={cancelCharge}
               onPointerLeave={cancelCharge}
-              onPointerMove={(event) => {
-                if (!charging) return;
-                // hitzone-wrap → hitzone-wrap 부모(main.stage) 기준
-                const stage = event.currentTarget.closest(".stage");
-                if (!stage) return;
-                const rect = stage.getBoundingClientRect();
-                const x = ((event.clientX - rect.left) / rect.width) * 100;
-                const y = ((event.clientY - rect.top) / rect.height) * 100;
-                setCrosshairPos({ x, y });
-              }}
+            />
             />
           ))}
         </div>
