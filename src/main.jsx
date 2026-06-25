@@ -7,7 +7,7 @@ const SUPABASE_URL = "https://ydgnnikfmesvosghsdeg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZ25uaWtmbWVzdm9zZ2hzZGVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzI3NTcsImV4cCI6MjA5NzQwODc1N30.2fZgjUNFJVm3PrUsfqeO8Eu9UwyFoHYj9ao1Js6VFCg";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const VERSION = "v2.3";
+const VERSION = "v2.5";
 
 const COMBO_LIMIT_MS = 500;
 const MAX_HP = 10000;
@@ -690,39 +690,13 @@ function App() {
         }}
         onPointerUp={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
-          const rawY = e.clientY - rect.top;
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
 
-          if (!isKO && !isReviving) {
-            if (chargeLevelLive >= 2) {
-              // lv2+ 차지: 조준경 위치(% 좌표) 기준으로 존 판정
-              const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
-              const offsetRatio = isTouchDevice ? 0.4 : 0;
-              const adjustedClientY = e.clientY - rect.height * offsetRatio;
-              const x = e.clientX - rect.left;
-              const y = rawY - rect.height * offsetRatio;
-
-              // 조준경 % 좌표로 픽셀 히트 판정
-              if (isPixelHit(e.clientX, adjustedClientY)) {
-                // 조준경이 가리키는 좌표로 존 찾기
-                const zone = getZoneAtPercent(e.clientX, adjustedClientY);
-                if (zone) {
-                  endCharge(zone, e);
-                  cancelCharge();
-                  return;
-                }
-                // 픽셀은 히트인데 존이 없으면 가장 가까운 존으로
-                endCharge("belly", e);
-                cancelCharge();
-                return;
-              }
-              // 픽셀 미스
+          if (!isKO && !isReviving && !hitZoneTriggered.current) {
+            // 히트존 밖 터치 → 픽셀 판정 후 MISS
+            if (!isPixelHit(e.clientX, e.clientY)) {
               triggerMiss(x, y);
-            } else if (!hitZoneTriggered.current) {
-              // lv1 이하: 히트존 밖 터치만 MISS
-              const x = e.clientX - rect.left;
-              if (!isPixelHit(e.clientX, e.clientY)) {
-                triggerMiss(x, rawY);
-              }
             }
           }
           hitZoneTriggered.current = false;
@@ -740,9 +714,7 @@ function App() {
               position: "absolute",
               left: `${crosshairPos.x}%`,
               top:  `${crosshairPos.y}%`,
-              transform: window.matchMedia("(pointer: coarse)").matches
-                ? "translate(-50%, -140%)"  // 모바일 터치: 손가락 위로 올림
-                : "translate(-50%, -50%)",  // PC 마우스: 커서 위치 그대로
+              transform: "translate(-50%, -50%)",
               zIndex: 19,
               pointerEvents: "none",
             }}
@@ -819,11 +791,7 @@ function App() {
           {Object.entries(ZONES).map(([key, zone]) => (
             <button key={key} aria-label={`${zone.name} hit zone`} className={`hit-zone ${zone.hitbox}`}
               onPointerDown={startCharge}
-              onPointerUp={(event) => {
-                // lv2+ 차지 중이면 히트존 판정 무시 → stage onPointerUp에서 처리
-                if (chargeLevelLive >= 2) return;
-                endCharge(key, event);
-              }}
+              onPointerUp={(event) => endCharge(key, event)}
               onPointerCancel={cancelCharge}
             />
           ))}
