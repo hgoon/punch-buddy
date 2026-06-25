@@ -2,14 +2,76 @@ import React, { useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
+const ZONES = {
+  head: {
+    name: "머리",
+    min: 8,
+    max: 16,
+    reaction: "hit-head",
+    hitbox: "head-zone",
+    wound: { emoji: "🩹", x: 49, y: 24 },
+  },
+  face: {
+    name: "얼굴",
+    min: 11,
+    max: 24,
+    reaction: "hit-face",
+    hitbox: "face-zone",
+    wound: { emoji: "🩸", x: 51, y: 31 },
+  },
+  philtrum: {
+    name: "인중",
+    min: 15,
+    max: 30,
+    reaction: "hit-face",
+    hitbox: "philtrum-zone",
+    weak: true,
+    wound: { emoji: "🩸", x: 50, y: 33 },
+  },
+  chest: {
+    name: "명치",
+    min: 16,
+    max: 32,
+    reaction: "hit-body",
+    hitbox: "chest-zone",
+    weak: true,
+    wound: { emoji: "🟣", x: 50, y: 49 },
+  },
+  belly: {
+    name: "배",
+    min: 9,
+    max: 19,
+    reaction: "hit-body",
+    hitbox: "belly-zone",
+    wound: { emoji: "🟣", x: 49, y: 57 },
+  },
+  groin: {
+    name: "급소",
+    min: 14,
+    max: 28,
+    reaction: "hit-groin",
+    hitbox: "groin-zone",
+    weak: true,
+    wound: { emoji: "💫", x: 51, y: 68 },
+  },
+  leg: {
+    name: "다리",
+    min: 6,
+    max: 14,
+    reaction: "hit-leg",
+    hitbox: "leg-zone",
+    wound: { emoji: "🩹", x: 54, y: 78 },
+  },
+};
+
 function App() {
   const pressStart = useRef(0);
   const effectId = useRef(1);
+  const woundId = useRef(1);
 
   const [nickname, setNickname] = useState(
     localStorage.getItem("punch_nickname") || ""
   );
-
   const [started, setStarted] = useState(
     !!localStorage.getItem("punch_nickname")
   );
@@ -25,23 +87,10 @@ function App() {
   const [reaction, setReaction] = useState("");
   const [chargePercent, setChargePercent] = useState(0);
   const [floatingEffects, setFloatingEffects] = useState([]);
-  const [condition, setCondition] = useState({
-    bruise: false,
-    nosebleed: false,
-    bandage: false,
-    dizzy: false,
-  });
-
-  const zones = {
-    head: { name: "머리", min: 8, max: 16, reaction: "hit-head" },
-    face: { name: "얼굴", min: 10, max: 22, reaction: "hit-face" },
-    body: { name: "몸통", min: 7, max: 16, reaction: "hit-body" },
-    leg: { name: "다리", min: 5, max: 13, reaction: "hit-leg" },
-  };
+  const [wounds, setWounds] = useState([]);
 
   function startGame() {
     const cleanName = nickname.trim();
-
     if (!cleanName) {
       alert("닉네임을 입력해줘!");
       return;
@@ -66,33 +115,32 @@ function App() {
     setReaction("");
     setChargePercent(0);
     setFloatingEffects([]);
-    setCondition({
-      bruise: false,
-      nosebleed: false,
-      bandage: false,
-      dizzy: false,
-    });
+    setWounds([]);
   }
 
-  function startCharge() {
+  function startCharge(event) {
+    event.preventDefault();
     pressStart.current = Date.now();
     setChargePercent(100);
   }
 
   function endCharge(zoneKey, event) {
-    const zone = zones[zoneKey];
+    event.preventDefault();
+
+    const zone = ZONES[zoneKey];
     if (!zone) return;
 
     const rect = event.currentTarget.parentElement.getBoundingClientRect();
     const touchX = event.clientX - rect.left;
     const touchY = event.clientY - rect.top;
 
-    const holdTime = Math.min(Date.now() - pressStart.current, 2000);
-    const chargeMultiplier = 1 + holdTime / 900;
+    const holdTime = Math.min(Date.now() - pressStart.current, 2200);
+    const chargeMultiplier = 1 + holdTime / 850;
 
     const baseDamage = random(zone.min, zone.max);
-    const isCritical = Math.random() < 0.14;
-    const isUltra = holdTime > 1300 && Math.random() < 0.22;
+    const weakBonus = zone.weak ? 0.16 : 0;
+    const isCritical = Math.random() < 0.12 + weakBonus;
+    const isUltra = holdTime > 1300 && Math.random() < 0.22 + weakBonus;
 
     let damage = Math.floor(baseDamage * chargeMultiplier);
 
@@ -109,8 +157,6 @@ function App() {
     setStats(nextStats);
     localStorage.setItem("punch_stats", JSON.stringify(nextStats));
 
-    updateCondition(nextStats.hits, damage, zoneKey);
-
     const nextReaction = isUltra
       ? "super-critical"
       : isCritical
@@ -124,11 +170,11 @@ function App() {
       x: touchX,
       y: touchY,
       damage,
-      zoneName: zone.name,
       critical: isCritical,
       ultra: isUltra,
     });
 
+    addWound(zone, damage, isCritical, isUltra);
     vibrate(isUltra, isCritical);
 
     const message = isUltra
@@ -141,41 +187,56 @@ function App() {
 
     setTimeout(() => {
       setReaction("");
-    }, isUltra ? 650 : 430);
+    }, isUltra ? 700 : 460);
   }
 
-  function addFloatingEffect({ x, y, damage, zoneName, critical, ultra }) {
+  function addFloatingEffect({ x, y, damage, critical, ultra }) {
     const id = effectId.current++;
 
-    const next = {
-      id,
-      x,
-      y,
-      damage,
-      zoneName,
-      critical,
-      ultra,
-      label: ultra ? "ULTRA!" : critical ? "CRITICAL!" : "HIT!",
-      emoji: ultra ? "💥" : critical ? "💢" : "👊",
-    };
-
-    setFloatingEffects((prev) => [...prev, next]);
+    setFloatingEffects((prev) => [
+      ...prev,
+      {
+        id,
+        x,
+        y,
+        damage,
+        critical,
+        ultra,
+        label: ultra ? "ULTRA!" : critical ? "CRITICAL!" : "HIT!",
+        emoji: ultra ? "💥" : critical ? "💢" : "👊",
+      },
+    ]);
 
     setTimeout(() => {
       setFloatingEffects((prev) => prev.filter((item) => item.id !== id));
     }, 850);
   }
 
-  function updateCondition(hits, damage, zoneKey) {
-    setCondition((prev) => {
-      const next = { ...prev };
+  function addWound(zone, damage, isCritical, isUltra) {
+    if (!zone.wound) return;
 
-      if (hits >= 5 || zoneKey === "face") next.bruise = true;
-      if (hits >= 9 || (zoneKey === "face" && damage >= 35)) next.nosebleed = true;
-      if (hits >= 16 || damage >= 65) next.bandage = true;
-      if (damage >= 90 || hits >= 28) next.dizzy = true;
+    const shouldAdd =
+      isUltra || isCritical || damage >= 25 || Math.random() < 0.24;
 
-      return next;
+    if (!shouldAdd) return;
+
+    const id = woundId.current++;
+    const spreadX = random(-4, 4);
+    const spreadY = random(-3, 3);
+
+    setWounds((prev) => {
+      const next = [
+        ...prev,
+        {
+          id,
+          emoji: isUltra ? "💫" : zone.wound.emoji,
+          x: zone.wound.x + spreadX,
+          y: zone.wound.y + spreadY,
+          big: isUltra || damage >= 45,
+        },
+      ];
+
+      return next.slice(-8);
     });
   }
 
@@ -220,7 +281,12 @@ function App() {
   }
 
   return (
-    <div className="app">
+    <div
+      className="app"
+      onContextMenu={(e) => e.preventDefault()}
+      onDragStart={(e) => e.preventDefault()}
+      onSelect={(e) => e.preventDefault()}
+    >
       <header className="top">
         <div>
           <h1>혼쭐내기 👊</h1>
@@ -251,17 +317,28 @@ function App() {
         </div>
       </section>
 
-      <main className={`stage ${reaction.includes("critical") ? "shake" : ""}`}>
-        <img
-          className={`character ${reaction}`}
-          src="/coach_red.png"
-          alt="character"
-        />
+      <main
+        className={`stage ${reaction.includes("critical") ? "shake" : ""}`}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        <div className="target-wrap">
+          <img
+            className={`character ${reaction}`}
+            src="/coach_red.png"
+            alt="character"
+            draggable="false"
+          />
 
-        {condition.bruise && <div className="damage-mark bruise">🟣</div>}
-        {condition.nosebleed && <div className="damage-mark nosebleed">🩸</div>}
-        {condition.bandage && <div className="damage-mark bandage">🩹</div>}
-        {condition.dizzy && <div className="damage-mark dizzy">💫</div>}
+          {wounds.map((wound) => (
+            <div
+              key={wound.id}
+              className={`wound ${wound.big ? "big-wound" : ""}`}
+              style={{ left: `${wound.x}%`, top: `${wound.y}%` }}
+            >
+              {wound.emoji}
+            </div>
+          ))}
+        </div>
 
         {floatingEffects.map((item) => (
           <div
@@ -277,37 +354,16 @@ function App() {
           </div>
         ))}
 
-        <button
-          aria-label="head hit zone"
-          className="hit-zone head-zone"
-          onPointerDown={startCharge}
-          onPointerUp={(event) => endCharge("head", event)}
-          onPointerCancel={() => setChargePercent(0)}
-        />
-
-        <button
-          aria-label="face hit zone"
-          className="hit-zone face-zone"
-          onPointerDown={startCharge}
-          onPointerUp={(event) => endCharge("face", event)}
-          onPointerCancel={() => setChargePercent(0)}
-        />
-
-        <button
-          aria-label="body hit zone"
-          className="hit-zone body-zone"
-          onPointerDown={startCharge}
-          onPointerUp={(event) => endCharge("body", event)}
-          onPointerCancel={() => setChargePercent(0)}
-        />
-
-        <button
-          aria-label="leg hit zone"
-          className="hit-zone leg-zone"
-          onPointerDown={startCharge}
-          onPointerUp={(event) => endCharge("leg", event)}
-          onPointerCancel={() => setChargePercent(0)}
-        />
+        {Object.entries(ZONES).map(([key, zone]) => (
+          <button
+            key={key}
+            aria-label={`${zone.name} hit zone`}
+            className={`hit-zone ${zone.hitbox}`}
+            onPointerDown={startCharge}
+            onPointerUp={(event) => endCharge(key, event)}
+            onPointerCancel={() => setChargePercent(0)}
+          />
+        ))}
       </main>
 
       <section className="charge-box">
